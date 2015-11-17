@@ -1,0 +1,31 @@
+#' Shiny bindings for plotly
+#' 
+#' Output and render functions for using plotly within Shiny 
+#' applications and interactive Rmd documents.
+#' 
+#' @param outputId output variable to read from
+#' @param width,height Must be a valid CSS unit (like \code{"100\%"},
+#'   \code{"400px"}, \code{"auto"}) or a number, which will be coerced to a
+#'   string and have \code{"px"} appended.
+#' @param expr An expression that generates a plotly
+#' @param env The environment in which to evaluate \code{expr}.
+#' @param quoted Is \code{expr} a quoted expression (with \code{quote()})? This 
+#'   is useful if you want to save an expression in a variable.
+#'   
+#' @importFrom htmlwidgets shinyWidgetOutput
+#' @importFrom htmlwidgets shinyRenderWidget
+#' @name plotly-shiny
+#'
+#' @export
+plotlyOutput <- function(outputId, width = "100%", height = "400px") {
+  htmlwidgets::shinyWidgetOutput(outputId, "plotly", width, height, package = "plotly")
+}
+
+#' @rdname plotly-shiny
+#' @export
+renderPlotly <- function(expr, env = parent.frame(), quoted = FALSE) {
+  if (!quoted) { expr <- substitute(expr) } # force quoted
+  # https://github.com/ramnathv/htmlwidgets/issues/166#issuecomment-153000306
+  expr <- as.call(list(call(":::", quote("plotly"), quote("toWidget")), expr))
+  shinyRenderWidget(expr, plotlyOutput, env, quoted = TRUE)
+}
