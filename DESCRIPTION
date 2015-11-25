@@ -1,7 +1,7 @@
 Package: plotly
 Title: Create Interactive Web Graphics via Plotly's JavaScript Graphing
         Library
-Version: 2.0.2
+Version: 2.0.3
 Authors@R: c(person("Carson", "Sievert", role = c("aut", "cre"),
     email = "cpsievert1@gmail.com"),
     person("Chris", "Parmer", role = c("aut", "cph"),
@@ -26,9 +26,10 @@ Imports: scales, httr, jsonlite, magrittr, digest, viridis, base64enc,
 Suggests: dplyr, maps, testthat, knitr, devtools, shiny, htmltools,
         curl, rmarkdown, RColorBrewer, Rserve, RSclient, broom
 LazyData: true
+VignetteBuilder: knitr
 RoxygenNote: 5.0.1
 NeedsCompilation: no
-Packaged: 2015-11-17 11:43:26 UTC; cpsievert
+Packaged: 2015-11-25 01:51:50 UTC; cpsievert
 Author: Carson Sievert [aut, cre],
   Chris Parmer [aut, cph],
   Toby Hocking [aut],
@@ -38,4 +39,4 @@ Author: Carson Sievert [aut, cre],
   Pedro Despouy [aut]
 Maintainer: Carson Sievert <cpsievert1@gmail.com>
 Repository: CRAN
-Date/Publication: 2015-11-17 15:25:36
+Date/Publication: 2015-11-25 08:54:28
