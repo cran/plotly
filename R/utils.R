@@ -1,18 +1,30 @@
-#' @importFrom grDevices col2rgb
-#' @importFrom utils getFromNamespace modifyList data packageVersion browseURL
-#' @importFrom stats setNames
-
 is.plotly <- function(x) inherits(x, "plotly")
 
 "%||%" <- function(x, y) {
-  if (length(x) > 0) x else y
+  if (length(x) > 0 || is_blank(x)) x else y
+}
+
+# modify %||% so that NA is considered NULL
+"%|x|%" <- function(x, y) {
+  if (length(x) == 1) {
+    if (is.na(x)) x <- NULL
+  }
+  x %||% y
+}
+
+strextract <- function(str, pattern) {
+  regmatches(str, regexpr(pattern, str))
+}
+
+compact <- function(x) {
+  Filter(Negate(is.null), x)
 }
 
 is.discrete <- function(x) {
   is.factor(x) || is.character(x) || is.logical(x)
 }
 
-# special enviroment that tracks trace/layout information
+# special enviroment that enables NSE
 plotlyEnv <- new.env(parent = emptyenv())
 
 # hash plot info, assign it to the special plotly environment, & attach it to data
@@ -112,27 +124,61 @@ from_JSON <- function(x, ...) {
   jsonlite::fromJSON(x, simplifyDataFrame = FALSE, simplifyMatrix = FALSE, ...)
 }
 
-# plotlyjs properties that must _always_ be an array (even if length 1)
-get_boxed <- function() {
-  c("x", "y", "lat", "lon", "text")
-}
-
 add_boxed <- function(x) {
   for (i in seq_along(x$data)) {
     # some object keys require an array, even if length one
     # one way to ensure atomic vectors of length 1 are not automatically unboxed,
     # by to_JSON(), is to attach a class of AsIs (via I())
     d <- x$data[[i]]
-    idx <- names(d) %in% get_boxed() & sapply(d, length) == 1
+    idx <- names(d) %in% get_boxed(d$type %||% "scatter") & sapply(d, length) == 1
     if (any(idx)) x$data[[i]][idx] <- lapply(d[idx], I)
+    # (safely) mark individual nested properties
+    x$data[[i]]$error_x$array <- i(d$error_x$array)
+    x$data[[i]]$error_y$array <- i(d$error_y$array)
+    x$data[[i]]$error_x$arrayminus <- i(d$error_x$arrayminus)
+    x$data[[i]]$error_y$arrayminus <- i(d$error_y$arrayminus)
   }
   x
+}
+
+# plotlyjs properties that must _always_ be an array (even if length 1)
+get_boxed <- function(type = "scatter") {
+  # if the trace type isn't found, provide some sensible defaults
+  boxers[[type]] %||% c("x", "y", "z", "lat", "lon", "text", "locations")
+}
+
+# if this ever needs updating see
+# https://github.com/ropensci/plotly/issues/415#issuecomment-173353138
+boxers <- list(
+  choropleth = c("locations", "z", "text"),
+  box = c("x", "y"),
+  heatmap = c("z", "text"),
+  histogram = c("x", "y"),
+  histogram2d = c("z", "color"),
+  mesh3d = c("x", "y", "z", "i", "j", "k", "intensity", "vertexcolor", "facecolor"),
+  # TODO: what to do about marker.colors?
+  pie = c("labels", "values", "text"),
+  scatter = c("x", "y", "r", "t"),
+  scatter3d = c("x", "y", "z"),
+  scattergeo = c("lon", "lat", "locations"),
+  surface = c("x", "y", "z", "text")
+)
+
+i <- function(x) {
+  if (is.null(x)) {
+    return(NULL)
+  } else if (length(x) == 1) {
+    return(I(x))
+  } else{
+    return(x)
+  }
 }
 
 rm_asis <- function(x) {
   # jsonlite converts NULL to {} and NA to null (plotly prefers null to {})
   # https://github.com/jeroenooms/jsonlite/issues/29
   if (is.null(x)) return(NA)
+  if (is.data.frame(x)) return(x)
   if (is.list(x)) lapply(x, rm_asis) 
   # strip any existing 'AsIs' list elements of their 'AsIs' status.
   # this is necessary since ggplot_build(qplot(1:10, fill = I("red"))) 
@@ -145,16 +191,21 @@ rm_asis <- function(x) {
 
 # add a class to an object only if it is new, and keep any existing classes of 
 # that object
-struct <- function(x, y, ...) {
-  structure(x, class = unique(c(class(x), y)), ...)
-} 
+append_class <- function(x, y) {
+  structure(x, class = unique(c(class(x), y)))
+}
+prefix_class <- function(x, y) {
+  structure(x, class = unique(c(y, class(x))))
+}
+replace_class <- function(x, new, old) {
+  class(x) <- sub(old, new, class(x))
+  x
+}
 
 # TODO: what are some other common configuration options we want to support??
-get_domain <- function(type = "main") {
-  if (type == "stream") {
-    Sys.getenv("plotly_streaming_domain", "http://stream.plot.ly")
-  } else if (type == "v2") {
-    Sys.getenv("plotly_domain", "https://api.plot.ly/v2/")
+get_domain <- function(type = "") {
+  if (type == "api") {
+    Sys.getenv("plotly_api_domain", "https://api.plot.ly")
   } else {
     Sys.getenv("plotly_domain", "https://plot.ly")
   }
@@ -188,6 +239,25 @@ plotly_headers <- function(type = "main") {
     )
   }
   httr::add_headers(.headers = h)
+}
+
+
+perform_eval <- function(x) {
+  if (should_eval(x)) do_eval(x) else x
+}
+
+# env/enclos are special properties specific to the R API 
+# if they appear _and_ are environments, then evaluate arguments
+# (sometimes figures return these properties but evaluation doesn't make sense)
+should_eval <- function(x) { 
+  any(vapply(x[c("env", "enclos")], is.environment, logical(1))) 
+}
+
+# perform evaluation of arguments, keeping other list elements
+do_eval <- function(x) {
+  y <- c(x, eval(x$args, as.list(x$env, all.names = TRUE), x$enclos))
+  y[c("args", "env", "enclos")] <- NULL
+  y
 }
 
 # try to write environment variables to an .Rprofile

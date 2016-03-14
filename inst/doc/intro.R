@@ -42,9 +42,6 @@ economics %>%
 ## ---- eval = FALSE-------------------------------------------------------
 #  plotly_POST(s)
 
-## ---- results = 'asis', echo = FALSE-------------------------------------
-cat(plotly:::plotly_iframe("https://plot.ly/~agvd/1794/", 600, 600))
-
 ## ------------------------------------------------------------------------
 plot_ly(iris, x = Petal.Length, y = Petal.Width, 
         color = Species, mode = "markers")
