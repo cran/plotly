@@ -1,3 +1,78 @@
+3.4.13 -- 6 Apr 2016
+
+BUGFIX:
+
+In some cases, marker color was inheriting from the marker line color when
+it shouldn't have. See ##537.
+
+3.4.12 -- 5 Apr 2016
+
+CHANGES:
+
+Upgrade to plotlyjs v1.8.0 -- https://github.com/plotly/plotly.js/releases/tag/v1.8.0
+
+3.4.11 -- 2 Apr 2016
+
+BUGFIX:
+
+Fix bug when altering modebar button defaults
+
+3.4.10 -- 1 Apr 2016
+
+BUGFIX:
+
+Fix a geom_errorbar bug introduced in 3.4.9. See #513.
+
+3.4.9 -- 25 Mar 2016
+
+BUGFIX:
+
+Upgrade to plotlyjs 1.7.0. Fixes #513
+
+3.4.8 -- 23 Mar 2016
+
+BUGFIX:
+
+* Safeguard against null fields in selections. See #530.
+
+3.4.7 -- 19 Mar 2016
+
+BUGFIX:
+
+* Added custom CSS which allows plotly to work nicely in ioslides.
+
+3.4.6 -- 17 Mar 2016
+
+NEW FEATURES:
+
+The 'plotly_relayout' event is now accessible via the event_data() function.
+
+Fixed #514.
+
+3.4.5 -- 17 Mar 2016
+
+BUGFIX:
+
+Fixed #514.
+
+3.4.4 -- 17 Mar 2016
+
+BUGFIX:
+
+Show discrete positional values in tooltip (see #515); better GeomTile conversion; pass plot object into layers2traces.
+
+3.4.3 -- 14 Mar 2016
+
+BUGFIX:
+
+Custom facet labeller functions will now translate correctly. See #507.
+
+3.4.2 -- 14 Mar 2016
+
+BUGFIX:
+
+Automatic resizing will now occur only when layout.autosize is true (the default). See #403.
+
 3.4.1 -- 13 Mar 2016
 
 BUGFIX:

@@ -8,7 +8,9 @@ HTMLWidgets.widget({
   },
   
   resize: function(el, width, height, instance) {
-    Plotly.relayout(el.id, {width: width, height: height});
+    if (instance.autosize) {
+      Plotly.relayout(el.id, {width: width, height: height});
+    }
   },  
   
   renderValue: function(el, x, instance) {
@@ -27,6 +29,7 @@ HTMLWidgets.widget({
     if (!instance.plotly) {
       Plotly.plot(graphDiv, x.data, x.layout, x.config);
       instance.plotly = true;
+      instance.autosize = x.layout.autosize;
     } else {
       Plotly.newPlot(graphDiv, x.data, x.layout);
     }
@@ -47,7 +50,7 @@ HTMLWidgets.widget({
           var tr = x.data[pt.curveNumber];
           // add on additional trace info, if it exists
           attachKey = function(keyName) {
-            if (tr.hasOwnProperty(keyName)) {
+            if (tr.hasOwnProperty(keyName) && tr[keyName] !== null) {
               if (typeof pt.pointNumber === "number") {
                 obj[keyName] = tr[keyName][pt.pointNumber];
               } else {
@@ -68,6 +71,13 @@ HTMLWidgets.widget({
     
     // send user input event data to shiny
     if (shinyMode) {
+      // https://plot.ly/javascript/zoom-events/
+      graphDiv.on('plotly_relayout', function(d) {
+        Shiny.onInputChange(
+          ".clientValue-" + "plotly_relayout" + "-" + x.source, 
+          JSON.stringify(d)
+        );
+      });
       graphDiv.on('plotly_hover', sendEventData('plotly_hover'));
       graphDiv.on('plotly_click', sendEventData('plotly_click'));
       graphDiv.on('plotly_selected', sendEventData('plotly_selected'));
