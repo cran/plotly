@@ -5,7 +5,7 @@
 \title{Create plotly graphs using ggplot2 syntax}
 \usage{
 ggplotly(p = ggplot2::last_plot(), width = NULL, height = NULL,
-  tooltip = "all", source = "A")
+  tooltip = "all", source = "A", ...)
 }
 \arguments{
 \item{p}{a ggplot object.}
@@ -22,6 +22,8 @@ also control the order they appear. For example, use
 colour last.}
 
 \item{source}{Only relevant for \link{event_data}.}
+
+\item{...}{arguments passed onto methods.}
 }
 \value{
 a plotly object

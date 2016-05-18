@@ -141,7 +141,8 @@ to_basic.GeomBoxplot <- function(data, prestats_data, layout, params, p, ...) {
 #' @export
 to_basic.GeomSmooth <- function(data, prestats_data, layout, params, p, ...) {
   dat <- prefix_class(data, "GeomPath")
-  dat$alpha <- NULL
+  # alpha for the path is always 1 (see GeomSmooth$draw_key)
+  dat$alpha <- 1
   if (!identical(params$se, FALSE)) {
     dat2 <- prefix_class(ribbon_dat(data), c("GeomPolygon", "GeomSmooth"))
     dat2$colour <- NULL
@@ -375,6 +376,7 @@ geom2trace.GeomPath <- function(data, params, p) {
     x = data$x,
     y = data$y,
     text = data$hovertext,
+    key = data$key,
     type = "scatter",
     mode = "lines",
     name = if (inherits(data, "GeomSmooth")) "fitted values",
@@ -432,6 +434,7 @@ geom2trace.GeomBar <- function(data, params, p) {
     x = data$x,
     y = data$y,
     text = data$hovertext,
+    key = data$key,
     type = "bar",
     marker = list(
       autocolorscale = FALSE,
@@ -454,12 +457,16 @@ geom2trace.GeomPolygon <- function(data, params, p) {
     x = data$x,
     y = data$y,
     text = data$hovertext,
+    key = data$key,
     type = "scatter",
     mode = "lines",
     line = list(
       # NOTE: line attributes must be constant on a polygon
       width = aes2plotly(data, params, "size"),
-      color = aes2plotly(data, params, "colour"),
+      color = toRGB(
+        aes2plotly(data, params, "colour"),
+        aes2plotly(data, params, "alpha")
+      ),
       dash = aes2plotly(data, params, "linetype")
     ),
     fill = "tozerox",
@@ -511,6 +518,7 @@ geom2trace.GeomText <- function(data, params, p) {
     x = data$x,
     y = data$y,
     text = data$label,
+    key = data$key,
     textfont = list(
       # TODO: how to translate fontface/family?
       size = aes2plotly(data, params, "size"),

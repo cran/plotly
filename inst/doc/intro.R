@@ -18,12 +18,12 @@ plot_ly(economics, x = date, y = unemploy / pop,
 ## ------------------------------------------------------------------------
 m <- loess(unemploy / pop ~ as.numeric(date), data = economics)
 p <- plot_ly(economics, x = date, y = unemploy / pop, name = "raw") 
-add_trace(p, y = fitted(m), name = "loess")
+add_trace(p, x = date, y = fitted(m), name = "loess")
 
 ## ------------------------------------------------------------------------
 economics %>%
   plot_ly(x = date, y = unemploy / pop) %>% 
-  add_trace(y = fitted(m)) %>%
+  add_trace(x = date, y = fitted(m)) %>%
   layout(showlegend = F)
 
 ## ------------------------------------------------------------------------
@@ -83,29 +83,4 @@ plot_ly(iris, x = Petal.Length, y = Petal.Width,
 ## ------------------------------------------------------------------------
 plot_ly(iris, x = Petal.Length, y = Petal.Width, mode = "markers",
         symbol = Species, symbols = c("cross", "square", "triangle-down"))
-
-## ------------------------------------------------------------------------
-plot_ly(iris, x = Petal.Length, y = Petal.Width, 
-        group = Species, mode = "markers")
-
-## ------------------------------------------------------------------------
-iris$id <- as.integer(iris$Species)
-p <- plot_ly(iris, x = Petal.Length, y = Petal.Width, group = Species,
-             xaxis = paste0("x", id), mode = "markers")
-subplot(p)
-
-## ------------------------------------------------------------------------
-p2 <- layout(
-  p, 
-  xaxis = list(range = range(Petal.Length) + c(-0.1, 0.1)),
-  yaxis = list(range = range(Petal.Width) + c(-0.1, 0.1))
-)
-subplot(p2)
-
-## ------------------------------------------------------------------------
-layout(
-    subplot(p2),
-    yaxis2 = list(title = ""), 
-    yaxis3 = list(title = "")
-)
 

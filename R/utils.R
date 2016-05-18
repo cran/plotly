@@ -1,4 +1,6 @@
-is.plotly <- function(x) inherits(x, "plotly")
+is.plotly <- function(x) {
+  inherits(x, c("plotly_hash", "plotly_built", "plotly_subplot"))
+}
 
 "%||%" <- function(x, y) {
   if (length(x) > 0 || is_blank(x)) x else y
@@ -36,7 +38,7 @@ hash_plot <- function(df, p) {
   assign(hash, p, envir = plotlyEnv)
   attr(df, "plotly_hash") <- hash
   # add plotly class mainly for printing method
-  class(df) <- unique(c("plotly", class(df)))
+  class(df) <- unique(c("plotly_hash", class(df)))
   # return a data frame to be compatible with things like dplyr
   df
 }
@@ -73,7 +75,7 @@ last_plot <- function(data = NULL) {
   if (inherits(p, "try-error")) stop("The last plot doesn't exist")
   structure(
     p, 
-    class = unique(c("plotly", class(p)))
+    class = unique(c("plotly_hash", class(p)))
   )
 }
 
