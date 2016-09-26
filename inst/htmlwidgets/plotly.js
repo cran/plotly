@@ -4,6 +4,12 @@ HTMLWidgets.widget({
   type: "output",
   
   initialize: function(el, width, height) {
+    // when upgrading plotly.js,
+    // uncomment this console.log(), then do `load_all(); plot_ly()` 
+    // open in chrome, right-click on console output: "save-as" -> "schema.json"
+    // Schema <- jsonlite::fromJSON("~/Downloads/schema.json")
+    // devtools::use_data(Schema, overwrite = T, internal = T)
+    // console.log(JSON.stringify(Plotly.PlotSchema.get()));
     return {};
   },
   
@@ -27,11 +33,11 @@ HTMLWidgets.widget({
     
     // if no plot exists yet, create one with a particular configuration
     if (!instance.plotly) {
-      Plotly.plot(graphDiv, x.data, x.layout, x.config);
+      var plot = Plotly.plot(graphDiv, x.data, x.layout, x.config);
       instance.plotly = true;
       instance.autosize = x.layout.autosize;
     } else {
-      Plotly.newPlot(graphDiv, x.data, x.layout);
+      var plot = Plotly.newPlot(graphDiv, x.data, x.layout);
     }
     
     sendEventData = function(eventType) {
@@ -62,10 +68,8 @@ HTMLWidgets.widget({
           attachKey("key");
           return obj; 
         });
-        Shiny.onInputChange(
-          ".clientValue-" + eventType + "-" + x.source, 
-          JSON.stringify(d)
-        );
+        var src = ".clientValue-" + eventType + "-" + x.source;
+        Shiny.onInputChange(src, JSON.stringify(d));
       };
     };
     

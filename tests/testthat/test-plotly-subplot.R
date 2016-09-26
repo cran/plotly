@@ -31,8 +31,8 @@ test_that("nrows argument works", {
 
 test_that("group + [x/y]axis works", {
   iris$id <- as.integer(iris$Species)
-  p <- plot_ly(iris, x = Petal.Length, y = Petal.Width, group = Species,
-               xaxis = paste0("x", id), mode = "markers")
+  p <- plot_ly(iris, x = ~Petal.Length, y = ~Petal.Width, color = ~Species,
+               xaxis = ~paste0("x", id), mode = "markers")
   s <- expect_traces(subplot(p, margin = 0.05), 3, "group")
   ax <- s$layout[grepl("^[x-y]axis", names(s$layout))]
   doms <- lapply(ax, "[[", "domain")
@@ -45,10 +45,13 @@ test_that("group + [x/y]axis works", {
   expect_true(all(1 >= xdom[[3]] & xdom[[3]] > 2/3))
 })
 
-test_that("shareX produces one x-axis", {
+test_that("shareX produces one x-axis and a legend", {
   s <- subplot(plot_ly(x = 1), plot_ly(x = 1), nrows = 2, shareX = TRUE)
   l <- expect_traces(s, 2, "shareX")
   expect_true(sum(grepl("^xaxis", names(l$layout))) == 1)
+  expect_true(l$data[[1]]$showlegend %||% TRUE)
+  expect_true(l$data[[2]]$showlegend %||% TRUE)
+  expect_true(l$layout$showlegend %||% TRUE)
 })
 
 test_that("shareY produces one y-axis", {
@@ -91,8 +94,8 @@ test_that("Row/column height/width", {
 })
 
 test_that("recursive subplots work", {
-  p1 <- plot_ly(economics, x = date, y = unemploy)
-  p2 <- plot_ly(economics, x = date, y = uempmed)
+  p1 <- plot_ly(economics, x = ~date, y = ~unemploy)
+  p2 <- plot_ly(economics, x = ~date, y = ~uempmed)
   s1 <- subplot(p1, p1, shareY = TRUE)
   s2 <- subplot(p2, p2, shareY = TRUE)
   s <- subplot(s1, s2, nrows = 2, shareX = TRUE)
@@ -145,10 +148,9 @@ test_that("geo+cartesian behaves", {
   )
   # create a map of population density
   density <- state.x77[, "Population"] / state.x77[, "Area"]
-  map <- plot_ly(
-    z = density, 
-    text = state.name, locations = state.abb,
-    type = 'choropleth', locationmode = 'USA-states', geo = "geo"
+  map <- plot_geo(
+    z = ~density, text = state.name, 
+    locations = state.abb, locationmode = 'USA-states'
   ) %>% layout(geo = g)
   # create a bunch of horizontal bar charts 
   vars <- colnames(state.x77)

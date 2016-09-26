@@ -4,7 +4,7 @@
 \alias{plotly_POST}
 \title{Create/Modify plotly graphs}
 \usage{
-plotly_POST(x, filename = NULL, fileopt = "overwrite",
+plotly_POST(x = last_plot(), filename = NULL, fileopt = "overwrite",
   sharing = c("public", "private", "secret"))
 }
 \arguments{
@@ -43,7 +43,7 @@ Create and modify graphs on your plotly account via plotly's REST API
 }
 \examples{
 \dontrun{
-p <- plot_ly(mtcars, x = vs, type = "bar")
+p <- plot_ly(mtcars, x = ~factor(vs))
 plotly_POST(p, filename = "mtcars-bar-plot")
 }
 }
@@ -51,6 +51,6 @@ plotly_POST(p, filename = "mtcars-bar-plot")
 Carson Sievert
 }
 \seealso{
-\link{plot_ly}, \link{signup}
+\code{\link{plot_ly}()}, \code{\link{signup}()}
 }
 

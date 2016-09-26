@@ -4,7 +4,7 @@
 #' @return hexadecimal colour value (if is.na(x), return "transparent" for compatibility with Plotly)
 #' @export
 toRGB <- function(x, alpha = 1) {
-  if (is.null(x)) return(x)
+  if (length(x) == 0) return(x)
   if (any(x %in% "transparent")) return(x)
   # add alpha to already converted "rgb(x,y,z)" codes
   idx <- grepl("^rgba\\(", x) & alpha <= 1 & 0 <= alpha
@@ -24,6 +24,7 @@ toRGB <- function(x, alpha = 1) {
   )
   rgb_matrix["alpha", ] <- round(rgb_matrix["alpha", ], 4)
   rgba <- sprintf("rgba(%s)", apply(rgb_matrix, 2, paste, collapse = ","))
+  
   rgba[is.na(x)] <- "transparent"
   rgba
 }
@@ -37,4 +38,16 @@ rgb2hex <- function(string = "rgba(255,255,255,1)") {
     x[["alpha"]] <- x[["alpha"]] * 255
     do.call(grDevices::rgb, c(x, list(maxColorValue = 255)))
   })
+}
+
+#convert rgba() to rgb()
+strip_alpha <- function(string = "rgba(255,255,255,1)", warn = TRUE) {
+  if (length(string) == 0) return(string)
+  if (warn) {
+    if (any(!grepl(",1\\)$", string))) {
+      warning("Removing an alpha value lower than 1")
+    }
+  }
+  string <- sub(",1\\)$", ")", string)
+  sub("^rgba", "rgb", string)
 }

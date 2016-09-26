@@ -25,23 +25,25 @@
 #' viewing that page will be able to view the graph. 
 #' You do not need to be logged in to view this plot.
 #' @export
-#' @seealso \link{plot_ly}, \link{signup}
+#' @seealso \code{\link{plot_ly}()}, \code{\link{signup}()}
 #' @return An R object created by mapping the JSON content of the plotly API
 #' response to its R equivalent.
 #' @author Carson Sievert
 #' @examples
 #' \dontrun{
-#' p <- plot_ly(mtcars, x = vs, type = "bar")
+#' p <- plot_ly(mtcars, x = ~factor(vs))
 #' plotly_POST(p, filename = "mtcars-bar-plot")
 #' }
 
-plotly_POST <- function(x, filename = NULL, fileopt = "overwrite", 
+plotly_POST <- function(x = last_plot(), filename = NULL, fileopt = "overwrite", 
                         sharing = c("public", "private", "secret")) {
   x <- plotly_build(x)
+  if (inherits(x, "htmlwidget")) x <- x$x
   # try our damndest to assign a sensible filename
   x$filename <- filename %||% x$filename %||% as.character(x$layout$title) %||% 
       paste(c(x$layout$xaxis$title, x$layout$yaxis$title, x$layout$zaxis$title), 
-            collapse = " vs. ") %||% paste("Created at", Sys.time())
+            collapse = " vs. ")
+  if (nchar(x$filename) == 0) x$filename <- paste("Created at", Sys.time())
   if (!is.null(x$fileopt)) {
     warning("fileopt was specified in the wrong place.",
             "Please specify in plotly_POST()")
@@ -83,5 +85,5 @@ plotly_POST <- function(x, filename = NULL, fileopt = "overwrite",
                 new = "Success! Created a new plotly here -> ",
                 overwrite = "Success! Modified your plotly here -> ")
   message(msg, con$url)
-  structure(con, class = "figure")
+  structure(con, class = "plotly_figure")
 }

@@ -1,11 +1,159 @@
 #' @import ggplot2
 #' @importFrom grDevices col2rgb
+#' @importFrom graphics layout
 #' @importFrom utils getFromNamespace modifyList data packageVersion browseURL
-#' @importFrom stats setNames complete.cases
-#' @importFrom tidyr gather
-#' @importFrom plyr ddply summarise
-#' @importFrom viridis viridis
+#' @importFrom stats setNames complete.cases quantile
+#' @importFrom tidyr gather gather_ unnest
+#' @importFrom viridisLite viridis
 #' @importFrom jsonlite toJSON fromJSON
 #' @importFrom httr GET POST PATCH content config add_headers stop_for_status
-#' @importFrom htmlwidgets createWidget sizingPolicy
+#' @importFrom htmlwidgets createWidget sizingPolicy saveWidget
+#' @importFrom lazyeval f_eval is_formula all_dots is_lang f_new
+#' @importFrom tibble as_tibble
+#' @importFrom purrr transpose
 NULL
+
+
+#' @importFrom dplyr mutate 
+#' @name mutate
+#' @rdname reexports
+#' @export
+dplyr::mutate
+
+#' @importFrom dplyr mutate_
+#' @name mutate_
+#' @rdname reexports
+#' @export
+dplyr::mutate_
+
+#' @importFrom dplyr transmute
+#' @name transmute
+#' @rdname reexports
+#' @export
+dplyr::transmute
+
+#' @importFrom dplyr transmute_
+#' @name transmute_
+#' @rdname reexports
+#' @export
+dplyr::transmute_
+
+#' @importFrom dplyr select
+#' @name select
+#' @rdname reexports
+#' @export
+dplyr::select
+
+#' @importFrom dplyr select_
+#' @name select_
+#' @rdname reexports
+#' @export
+dplyr::select_
+
+#' @importFrom dplyr rename
+#' @name rename
+#' @rdname reexports
+#' @export
+dplyr::rename
+
+#' @importFrom dplyr rename_
+#' @name rename_
+#' @rdname reexports
+#' @export
+dplyr::rename_
+
+#' @importFrom dplyr group_by 
+#' @name group_by
+#' @rdname reexports
+#' @export
+dplyr::group_by
+
+#' @importFrom dplyr group_by_
+#' @name group_by_
+#' @rdname reexports
+#' @export
+dplyr::group_by_
+
+#' @importFrom dplyr groups
+#' @name groups
+#' @rdname reexports
+#' @export
+dplyr::groups
+
+#' @importFrom dplyr ungroup
+#' @name ungroup
+#' @rdname reexports
+#' @export
+dplyr::ungroup
+
+#' @importFrom dplyr summarise
+#' @name summarise
+#' @rdname reexports
+#' @export
+dplyr::summarise
+
+#' @importFrom dplyr summarise_
+#' @name summarise_
+#' @rdname reexports
+#' @export
+dplyr::summarise_
+
+#' @importFrom dplyr do
+#' @name do
+#' @rdname reexports
+#' @export
+dplyr::do
+
+#' @importFrom dplyr do_
+#' @name do_
+#' @rdname reexports
+#' @export
+dplyr::do_
+
+#' @importFrom dplyr arrange
+#' @name arrange
+#' @rdname reexports
+#' @export
+dplyr::arrange
+
+#' @importFrom dplyr arrange_
+#' @name arrange_
+#' @rdname reexports
+#' @export
+dplyr::arrange_
+
+#' @importFrom dplyr distinct
+#' @name distinct
+#' @rdname reexports
+#' @export
+dplyr::distinct
+
+#' @importFrom dplyr distinct_
+#' @name distinct_
+#' @rdname reexports
+#' @export
+dplyr::distinct_
+
+#' @importFrom dplyr slice
+#' @name slice
+#' @rdname reexports
+#' @export
+dplyr::slice
+
+#' @importFrom dplyr slice_
+#' @name slice_
+#' @rdname reexports
+#' @export
+dplyr::slice_
+
+#' @importFrom dplyr filter
+#' @name filter
+#' @rdname reexports
+#' @export
+dplyr::filter
+
+#' @importFrom dplyr filter_
+#' @name filter_
+#' @rdname reexports
+#' @export
+dplyr::filter_
