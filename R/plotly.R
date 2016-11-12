@@ -144,13 +144,10 @@ plot_ly <- function(data = data.frame(), ..., type = NULL,
         # sane margin defaults (mainly for RStudio)
         margin = list(b = 40, l = 60, t = 25, r = 10)
     ),
-    config = list(modeBarButtonsToRemove = I("sendDataToCloud")),
-    base_url = get_domain(),
-    # TODO: make this trace specific when we merge with crosstalk branch
     source = source
   )
-  
-  as_widget(p)
+  # ensure the collab button is shown (and the save/edit button is hidden) by default
+  config(as_widget(p))
 }
 
 

@@ -43,9 +43,16 @@ plotly_build.plotly <- function(p) {
     
     # if an annotation attribute is an array, expand into multiple annotations 
     nAnnotations <- max(lengths(x$annotations) %||% 0)
-    x$annotations <- purrr::transpose(lapply(x$annotations, function(x) {
-      as.list(rep(x, length.out = nAnnotations))
-    }))
+    if (!is.null(names(x$annotations))) {
+      # font is the only list object, so store it, and attach after transposing
+      font <- x$annotations[["font"]]
+      x$annotations <- purrr::transpose(lapply(x$annotations, function(x) {
+        as.list(rep(x, length.out = nAnnotations))
+      }))
+      for (i in seq_len(nAnnotations)) {
+        x$annotations[[i]][["font"]] <- font
+      }
+    }
     
     x[lengths(x) > 0]
 
@@ -65,18 +72,22 @@ plotly_build.plotly <- function(p) {
   p$x$layout$annotations <- annotations
   
   
+  
+  
   # If type was not specified in plot_ly(), it doesn't create a trace unless
   # there are no other traces
-  if (is.null(p$x$attrs[[1]][["type"]])) {
-    if (length(p$x$attrs) > 1 || isTRUE(attr(p, "ggplotly"))) {
-      p$x$attrs[[1]] <- NULL
-    }
+  if (is.null(p$x$attrs[[1]][["type"]]) && length(p$x$attrs) > 1) {
+    p$x$attrs[[1]] <- NULL
   }
+  
+  # have the attributes already been evaluated?
+  is.evaled <- function(x) inherits(x, "plotly_eval")
+  attrsToEval <- p$x$attrs[!vapply(p$x$attrs, is.evaled, logical(1))]
   
   # trace type checking and renaming for plot objects
   if (is_mapbox(p) || is_geo(p)) {
     p <- geo2cartesian(p)
-    p$x$attrs <- lapply(p$x$attrs, function(tr) {
+    attrsToEval <- lapply(attrsToEval, function(tr) {
       if (!grepl("scatter|choropleth", tr[["type"]] %||% "scatter")) {
         stop("Cant add a '", tr[["type"]], "' trace to a map object", call. = FALSE)
       }
@@ -141,8 +152,8 @@ plotly_build.plotly <- function(p) {
     isArray <- lapply(Attrs, function(x) {
       tryCatch(identical(x[["valType"]], "data_array"), error = function(e) FALSE)
     })
-    # I don't think we ever want mesh3d's data attrs
-    dataArrayAttrs <- if (identical(trace[["type"]], "mesh3d")) NULL else names(Attrs)[as.logical(isArray)]
+    # "non-tidy" traces allow x/y of different lengths, so ignore those
+    dataArrayAttrs <- if (is_tidy(trace)) names(Attrs)[as.logical(isArray)]
     allAttrs <- c(
       dataArrayAttrs, special_attrs(trace), npscales(),
       # for some reason, text isn't listed as a data array in some traces
@@ -179,16 +190,13 @@ plotly_build.plotly <- function(p) {
       #    are combined into a single grouping variable, .plotlyGroupIndex
       builtData <- arrange_safe(builtData, ".plotlyTraceIndex")
       isComplete <- complete.cases(builtData[names(builtData) %in% c("x", "y", "z")])
-      # is grouping relevant for this geometry? (e.g., grouping doesn't effect a scatterplot)
-      hasGrp <- inherits(trace, paste0("plotly_", c("segment", "path", "line", "polygon"))) ||
-        (grepl("scatter", trace[["type"]]) && grepl("lines", trace[["mode"]]))
       # warn about missing values if groups aren't relevant for this trace type
-      if (any(!isComplete) && !hasGrp) {
+      if (any(!isComplete) && !has_group(trace)) {
         warning("Ignoring ", sum(!isComplete), " observations", call. = FALSE)
       }
       builtData[[".plotlyMissingIndex"]] <- cumsum(!isComplete)
       builtData <- builtData[isComplete, ]
-      if (length(grps) && hasGrp && isTRUE(trace[["connectgaps"]])) {
+      if (length(grps) && has_group(trace) && isTRUE(trace[["connectgaps"]])) {
         stop(
           "Can't use connectgaps=TRUE when data has group(s).", call. = FALSE
         )
@@ -214,7 +222,9 @@ plotly_build.plotly <- function(p) {
     trace[c("ymin", "ymax", "yend", "xend")] <- NULL
     trace[lengths(trace) > 0]
 
-  }, p$x$attrs, names2(p$x$attrs))
+  }, attrsToEval, names2(attrsToEval))
+  
+  p$x$attrs <- lapply(p$x$attrs, function(x) structure(x, class = "plotly_eval"))
 
   # traceify by the interaction of discrete variables
   traces <- list()
@@ -229,7 +239,8 @@ plotly_build.plotly <- function(p) {
   traces <- lapply(traces, function(x) {
     d <- data.frame(x[names(x) %in% x$.plotlyVariableMapping], stringsAsFactors = FALSE)
     d <- group2NA(
-      d, ".plotlyGroupIndex", ordered = if (inherits(x, "plotly_line")) "x",
+      d, if (has_group(x)) ".plotlyGroupIndex", 
+      ordered = if (inherits(x, "plotly_line")) "x",
       retrace.first = inherits(x, "plotly_polygon")
     )
     for (i in x$.plotlyVariableMapping) {
@@ -320,6 +331,8 @@ plotly_build.plotly <- function(p) {
   p <- verify_hovermode(p)
   # try to convert to webgl if toWebGl was used
   p <- verify_webgl(p)
+  # make sure plots don't get sent out of the network (for enterprise)
+  p$x$base_url <- get_domain()
   p
 }
 
@@ -413,7 +426,7 @@ map_size <- function(traces) {
 # appends a new (empty) trace to generate (plot-wide) colorbar/colorscale
 map_color <- function(traces, title = "", na.color = "transparent") {
   color <- lapply(traces, function(x) {
-    x[["color"]] %||% if (has_attr(x$type, "colorscale")) x[["z"]] else NULL
+    x[["color"]] %||% if (grepl("histogram2d", x[["type"]])) c(0, 1) else if (has_attr(x[["type"]], "colorscale")) x[["z"]] else NULL
   })
   isConstant <- vapply(color, function(x) inherits(x, "AsIs") || is.null(x), logical(1))
   isNumeric <- vapply(color, is.numeric, logical(1)) & !isConstant
@@ -428,7 +441,9 @@ map_color <- function(traces, title = "", na.color = "transparent") {
   hasLine <- has_line(types, modes)
   hasText <- has_text(types, modes)
   hasZ <- has_attr(types, "colorscale") &
-    any(vapply(traces, function(tr) !is.null(tr$z), logical(1)))
+    any(vapply(traces, function(tr) {
+      !is.null(tr[["z"]]) || grepl("histogram2d", tr[["type"]])
+      }, logical(1)))
 
   colorDefaults <- traceColorDefaults()
   for (i in which(isConstant)) {
@@ -441,6 +456,7 @@ map_color <- function(traces, title = "", na.color = "transparent") {
     # we need some way to identify pre-specified defaults in subplot to retrain them
     if (is.null(color[[i]])) attr(rgb, "defaultAlpha") <- alpha
     obj <- if (hasLine[[i]]) "line" else if (hasMarker[[i]]) "marker" else if (hasText[[i]]) "textfont"
+    if (is.null(obj)) next
     traces[[i]][[obj]] <- modify_list(list(color = rgb), traces[[i]][[obj]])
     traces[[i]][[obj]] <- modify_list(list(fillcolor = rgb), traces[[i]][[obj]])
   }
@@ -476,7 +492,7 @@ map_color <- function(traces, title = "", na.color = "transparent") {
         traces[[i]] <- modify_list(colorObj, traces[[i]])
         traces[[i]]$colorscale <- as_df(traces[[i]]$colorscale)
         # sigh, contour colorscale doesn't support alpha
-        if (traces[[i]][["type"]] == "contour") {
+        if (grepl("contour", traces[[i]][["type"]])) {
           traces[[i]]$colorscale[, 2] <- strip_alpha(traces[[i]]$colorscale[, 2])
         }
         traces[[i]] <- structure(traces[[i]], class = c("plotly_colorbar", "zcolor"))
@@ -657,6 +673,7 @@ map_linetype <- function(traces) {
 traceify <- function(dat, x = NULL) {
   if (length(x) == 0) return(list(dat))
   lvls <- if (is.factor(x)) levels(x) else unique(x)
+  lvls <- lvls[lvls %in% x]
   # the order of lvls determines the order in which traces are drawn
   # for ordered factors at least, it makes sense to draw the highest level first
   # since that _should_ be the darkest color in a sequential pallette

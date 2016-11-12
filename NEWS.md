@@ -1,3 +1,51 @@
+# 4.5.5.9000
+
+## NEW FEATURES
+
+* Added support for the `timezone` argument in __ggplot2__'s `scale_datetime()`. Fixes (#743, thanks @earowang).
+
+## CHANGES
+
+* Now requires  a version of __ggplot2__ higher than 2.1.0 because the new ggproto faceting infrastructure introduced breaking changes.
+* A book icon is added to the mode bar, by default, which links to the plotly book. If you want to remove this icon from a plot `p`, do `config(p, modeBarButtonsToRemove = "Collaborate")`
+* Specifying height/width in `layout()` is now deprecated. Specify in `ggplotly()` or `plot_ly()`.
+* The `ggplotly()` function now preserves all information about the layer mapping. This makes it possible to access input/output data from any layer.
+
+## BUG FIXES
+
+* HTMLwidget.resize() used to ignore specified `layout.width`/`layout.height`.
+* When `height`/`width` are specified in `ggplotly()`, relative sizes are now translated correctly. Fixes #489 and #510.
+* More careful handling of font when expanding annotation arrays. Fixes #738.
+* Ignore data arrays of non-tidy traces. Fixes #737.
+* When using `ggplotly()` on a plot with `geom_line` and `group` aesthetic wrong tooltip information was shown. Fixes #774.
+
+# 4.5.5 -- 28 September 2016
+
+## NEW FEATURES
+
+* histogram2d/histogram2dcontour traces now respect the `colors` argument.
+
+## BUG FIX
+
+* Don't traceify by non-existant levels, fixes #735.
+
+# 4.5.4 -- 27 September 2016
+
+## BUG FIX
+
+* Only insert missing values to differentiate groups when it's relevant.
+
+# 4.5.3 -- 27 September 2016
+
+## NEW FEATURES
+
+* The `colorbar()` function gains a new `limits` arguments for controlling the colorscale
+limits.
+
+## BUG FIX
+
+* The `z` is now required in `add_heatmap()`. If you want a `z` to be computed, use `add_histogram()`.
+
 # 4.5.2 -- 23 September 2016
 
 ## NEW FEATURES

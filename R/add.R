@@ -64,9 +64,9 @@ add_trace <- function(p, ...,
   
   p <- add_data(p, data)
   
-  # inherit attributes from the "first layer"
+  # inherit attributes from the "first layer" (except the plotly_eval class)
   if (inherit) {
-    attrs <- modify_list(p$x$attrs[[1]], attrs)
+    attrs <- modify_list(unclass(p$x$attrs[[1]]), attrs)
   }
   
   p$x$attrs <- c(
@@ -409,12 +409,10 @@ add_heatmap <- function(p, x = NULL, y = NULL, z = NULL, ...,
     z <- z %||% p$x$attrs[[1]][["z"]]
   }
   if (is.null(z)) {
-    if (is.null(x) || is.null(y)) {
-      stop("Must supply both `x` and `y` attributes if `z` is NULL", call. = FALSE)
-    }
+    stop("Must supply `z` attribute", call. = FALSE)
   }
   add_trace_classed(
-    p, class = "plotly_heatmap", z = z,
+    p, class = "plotly_heatmap", z = z, x = x, y = y,
     type = "heatmap",  ..., data = data, inherit = inherit
   )
 }
