@@ -1,7 +1,12 @@
-#' Create plotly graphs using ggplot2 syntax
+#' Convert ggplot2 to plotly
 #'
-#' See up-to-date documentation and examples at
-#' \url{https://plot.ly/ggplot2}
+#' This function converts a \code{\link[ggplot2]{ggplot}()} object to a 
+#' plotly object. 
+#' 
+#' @details Conversion of relative sizes depends on the size of the current 
+#' graphics device (if no device is open, width/height of a new (off-screen) 
+#' device defaults to 640/480). In other words, \code{height} and
+#' \code{width} must be specified at runtime to ensure sizing is correct.
 #'
 #' @param p a ggplot object.
 #' @param width Width of the plot in pixels (optional, defaults to automatic sizing).
@@ -12,14 +17,20 @@
 #' also control the order they appear. For example, use
 #' \code{tooltip = c("y", "x", "colour")} if you want y first, x second, and
 #' colour last.
+#' @param dynamicTicks should plotly.js dynamically generate axis tick labels? 
+#' Dynamic ticks are useful for updating ticks in response to zoom/pan
+#' interactions; however, they can not always reproduce labels as they 
+#' would appear in the static ggplot2 image.
 #' @param layerData data from which layer should be returned?
 #' @param originalData should the "original" or "scaled" data be returned?
-#' @param source Only relevant for \link{event_data}.
+#' @param source a character string of length 1. Match the value of this string 
+#' with the source argument in \code{\link{event_data}()} to retrieve the 
+#' event data corresponding to a specific plot (shiny apps can have multiple plots).
 #' @param ... arguments passed onto methods.
-#' @seealso \code{\link{signup}()}, \code{\link{plot_ly}()}
-#' @return a plotly object
 #' @export
 #' @author Carson Sievert
+#' @references \url{https://plot.ly/ggplot2}
+#' @seealso \code{\link{plot_ly}()}
 #' @examples \dontrun{
 #' # simple example
 #' ggiris <- qplot(Petal.Width, Sepal.Length, data = iris, color = Species)
@@ -31,36 +42,60 @@
 #'   coord_equal() +
 #'   geom_point(aes(text = name, size = pop), colour = "red", alpha = 1/2)
 #' ggplotly(viz, tooltip = c("text", "size"))
+#' 
+#' 
+#' # highlighting lines
+#' demo("highlight-ggplotly", package = "plotly")
+#' 
+#' # client-side linked brushing
+#' library(crosstalk)
+#' d <- SharedData$new(mtcars)
+#' subplot(
+#'  qplot(data = d, x = mpg, y = wt),
+#'  qplot(data = d, x = mpg, y = vs)
+#' )
+#' 
+#' # client-side linked brushing in a scatterplot matrix
+#' SharedData$new(iris) %>%
+#'   GGally::ggpairs(aes(colour = Species), columns = 1:4) %>%
+#'   ggplotly(tooltip = c("x", "y", "colour"))
 #' }
 #'
 ggplotly <- function(p = ggplot2::last_plot(), width = NULL, height = NULL,
-                     tooltip = "all", layerData = 1, originalData = TRUE, 
-                     source = "A", ...) {
+                     tooltip = "all", dynamicTicks = FALSE, 
+                     layerData = 1, originalData = TRUE, source = "A", ...) {
   UseMethod("ggplotly", p)
 }
 
 #' @export
 ggplotly.plotly <- function(p = ggplot2::last_plot(), width = NULL, height = NULL,
-                            tooltip = "all", layerData = 1,
-                            originalData = TRUE, source = "A", ...) {
+                            tooltip = "all", dynamicTicks = FALSE, 
+                            layerData = 1, originalData = TRUE, source = "A", ...) {
   p
 }
 
 #' @export
 ggplotly.ggmatrix <- function(p = ggplot2::last_plot(), width = NULL,
-                              height = NULL, tooltip = "all", layerData = 1,
-                              originalData = TRUE, source = "A", ...) {
+                              height = NULL, tooltip = "all", dynamicTicks = FALSE, 
+                              layerData = 1, originalData = TRUE, source = "A", ...) {
+  dots <- list(...)
+  # provide a sensible crosstalk if none is already provided (makes ggnostic() work at least)
+  if (!crosstalk_key() %in% names(p$data)) {
+    p$data[[crosstalk_key()]] <- p$data[[".rownames"]] %||% seq_len(nrow(p$data))
+    attr(p$data, "set") <- dots[["set"]] %||% new_id()
+  }
   subplotList <- list()
   for (i in seq_len(p$ncol)) {
     columnList <- list()
     for (j in seq_len(p$nrow)) {
       thisPlot <- p[j, i]
       if (i == 1) {
-        if (p$showYAxisPlotLabels) thisPlot <- thisPlot + ylab(p$yAxisLabels[j])
+        # should the first column contain axis labels?
+        if (p$showYAxisPlotLabels %||% TRUE) thisPlot <- thisPlot + ylab(p$yAxisLabels[j])
       } else {
         # y-axes are never drawn on the interior, and diagonal plots are densities,
         # so it doesn't make sense to synch zoom actions on y
-        thisPlot <- thisPlot +
+        thisPlot <- thisPlot + ylab(NULL) +
           theme(
             axis.ticks.y = element_blank(),
             axis.text.y = element_blank()
@@ -68,30 +103,42 @@ ggplotly.ggmatrix <- function(p = ggplot2::last_plot(), width = NULL,
       }
       columnList <- c(
         columnList, list(ggplotly(
-          thisPlot, tooltip = tooltip, layerData = layerData,
-          originalData = originalData, source = source
+          thisPlot, tooltip = tooltip, dynamicTicks = dynamicTicks, 
+          layerData = layerData, originalData = originalData, source = source,
+          width = width, height = height
         ))
       )
     }
     # conditioned on a column in a ggmatrix, the x-axis should be on the
     # same scale.
-    s <- subplot(columnList, nrows = p$nrow, margin = 0.01, shareX = TRUE, titleY = TRUE)
+    s <- subplot(columnList, nrows = p$nrow, margin = 0.01, shareX = TRUE,
+                 titleY = TRUE, titleX = TRUE)
     subplotList <- c(subplotList, list(s))
   }
-  s <- layout(subplot(subplotList, nrows = 1), width = width, height = height)
+  s <- subplot(subplotList, nrows = 1, margin = 0.01, 
+               titleY = TRUE, titleX = TRUE) %>% 
+    hide_legend() %>%
+    layout(dragmode = "select")
   if (nchar(p$title %||% "") > 0) {
     s <- layout(s, title = p$title)
   }
+  for (i in seq_along(p$xAxisLabels)) {
+    s$x$layout[[sub("^xaxis1$", "xaxis", paste0("xaxis", i))]]$title <- p$xAxisLabels[[i]]
+  }
+  if (length(p$yAxisLabels)) {
+    s$x$layout$margin$l <- s$x$layout$margin$l + 50
+  }
+  
   config(s)
 }
 
 #' @export
 ggplotly.ggplot <- function(p = ggplot2::last_plot(), width = NULL,
-                            height = NULL, tooltip = "all", layerData = 1,
-                            originalData = TRUE, source = "A", ...) {
+                            height = NULL, tooltip = "all", dynamicTicks = FALSE,  
+                            layerData = 1, originalData = TRUE, source = "A", ...) {
   l <- gg2list(p, width = width, height = height, tooltip = tooltip, 
-               layerData = layerData, originalData = originalData, 
-               source = source, ...)
+               dynamicTicks = dynamicTicks, layerData = layerData, 
+               originalData = originalData, source = source, ...)
   config(as_widget(l))
 }
 
@@ -102,41 +149,84 @@ ggplotly.ggplot <- function(p = ggplot2::last_plot(), width = NULL,
 #' @param tooltip a character vector specifying which aesthetic tooltips to show in the
 #' tooltip. The default, "all", means show all the aesthetic tooltips
 #' (including the unofficial "text" aesthetic).
+#' @param dynamicTicks accepts the following values: \code{FALSE}, \code{TRUE}, \code{"x"}, or \code{"y"}.
+#' Dynamic ticks are useful for updating ticks in response to zoom/pan/filter
+#' interactions; however, there is no guarantee they reproduce axis tick text 
+#' as they would appear in the static ggplot2 image.
 #' @param layerData data from which layer should be returned?
 #' @param originalData should the "original" or "scaled" data be returned?
-#' @param source Only relevant for \link{event_data}.
+#' @param source a character string of length 1. Match the value of this string 
+#' with the source argument in \code{\link{event_data}()} to retrieve the 
+#' event data corresponding to a specific plot (shiny apps can have multiple plots).
 #' @param ... currently not used
 #' @return a 'built' plotly object (list with names "data" and "layout").
 #' @export
-gg2list <- function(p, width = NULL, height = NULL, tooltip = "all", 
+gg2list <- function(p, width = NULL, height = NULL, 
+                    tooltip = "all", dynamicTicks = FALSE, 
                     layerData = 1, originalData = TRUE, source = "A", ...) {
+  
+  # check the value of dynamicTicks
+  dynamicValues <- c(FALSE, TRUE, "x", "y")
+  if (length(setdiff(dynamicTicks, dynamicValues))) {
+   stop(
+     sprintf(
+       "`dynamicValues` accepts the following values: '%s'", 
+       paste(dynamicValues, collapse = "', '")
+     ), call. = FALSE
+    )
+  }
+  
+  # we currently support ggplot2 >= 2.2.1 (see DESCRIPTION)
+  # there are too many naming changes in 2.2.1.9000 to realistically 
+  if (packageVersion("ggplot2") == "2.2.1") {
+    warning(
+      "We recommend that you use the dev version of ggplot2 with `ggplotly()`\n",
+      "Install it with: `devtools::install_github('hadley/ggplot2')`", call. = FALSE
+    )
+    if (!identical(dynamicTicks, FALSE)) {
+      warning(
+        "You need the dev version of ggplot2 to use `dynamicTicks`", call. = FALSE
+      )
+    }
+    return(
+      gg2list_legacy(
+        p, width = width, height = height, tooltip = tooltip,
+        layerData = layerData, originalData = originalData, source = source, ...
+      )
+    )
+  }
+  
+  # To convert relative sizes correctly, we use grid::convertHeight(),
+  # which may open a new *screen* device, if none is currently open. 
+  # It is undesirable to both open a *screen* device and leave a new device
+  # open, so if required, we open a non-screen device now, and close on exit 
+  # see https://github.com/att/rcloud.htmlwidgets/issues/2
+  if (is.null(grDevices::dev.list()) || identical(Sys.getenv("RSTUDIO"), "1")) {
+    dev_fun <- if (system.file(package = "Cairo") != "") {
+      Cairo::Cairo
+    } else if (capabilities("png")) {
+      grDevices::png
+    } else if (capabilities("jpeg")) {
+      grDevices::jpeg 
+    } else {
+      stop(
+        "No graphics device is currently open and no cairo or bitmap device is available.\n", 
+        "A graphics device is required to convert sizes correctly. You have three options:",
+        "  (1) Open a graphics device (with the desired size)  using ggplotly()",
+        "  (2) install.packages('Cairo')",
+        "  (3) compile R to use a bitmap device (png or jpeg)",
+        call. = FALSE
+      )
+    }
+    dev_fun(file = tempfile(), width = width %||% 640, height = height %||% 480)
+    on.exit(grDevices::dev.off(), add = TRUE)
+  }
+  
   # ------------------------------------------------------------------------
   # Our internal version of ggplot2::ggplot_build(). Modified from
   # https://github.com/hadley/ggplot2/blob/0cd0ba/R/plot-build.r#L18-L92
   # ------------------------------------------------------------------------
   
-  # open a new graphics device, so we can convert relative sizes correctly
-  # if height/width is not specified, estimate it from the current device
-  deviceWidth <- width %||% unitConvert(grid::unit(1, "npc"), "pixels", "width")
-  deviceHeight <- height %||% unitConvert(grid::unit(1, "npc"), "pixels", "height")
-  # try to find a bitmap device (measured in pixels), 
-  # if none available, use default device and throw warning
-  dev_fun <- if (capabilities("png")) {
-    grDevices::png
-  } else if (capabilities("jpeg")) {
-    grDevices::jpeg 
-  } else {
-    warning(
-      "Couldn't find a bitmap device (e.g. png or jpeg).",
-      "To ensure sizes are converted correctly please",
-      "compile R to use a bitmap device", call. = FALSE
-    )
-    grDevices::dev.new
-  }
-  tmpPlotFile <- tempfile(fileext = ".png")
-  dev_fun(tmpPlotFile, width = deviceWidth, height = deviceHeight)
-  
-
   plot <- ggfun("plot_clone")(p)
   if (length(plot$layers) == 0) {
     plot <- plot + geom_blank()
@@ -148,7 +238,7 @@ gg2list <- function(p, width = NULL, height = NULL, tooltip = "all",
   sets <- lapply(layer_data, function(y) attr(y, "set"))
   
   scales <- plot$scales
-  
+
   # Apply function to layer and matching data
   by_layer <- function(f) {
     out <- vector("list", length(data))
@@ -160,9 +250,8 @@ gg2list <- function(p, width = NULL, height = NULL, tooltip = "all",
   
   # Initialise panels, add extra data for margins & missing facetting
   # variables, and add on a PANEL variable to data
-  layout <- ggfun("create_layout")(plot$facet)
-  data <- layout$setup(layer_data, plot$data, plot$plot_env, plot$coordinates)
-  data <- layout$map(data)
+  layout <- ggfun("create_layout")(plot$facet, plot$coordinates)
+  data <- layout$setup(layer_data, plot$data, plot$plot_env)
   
   # save the domain of the group for display in tooltips
   groupDomains <- Map(function(x, y) {
@@ -172,9 +261,28 @@ gg2list <- function(p, width = NULL, height = NULL, tooltip = "all",
     )
   }, data, layers)
   
+  # for simple (StatIdentity) geoms, add crosstalk key to aes mapping
+  # (effectively adding it as a group)
+  # later on, for more complicated geoms (w/ non-trivial summary statistics),
+  # we construct a nested key mapping (within group)
+  layers <- Map(function(x, y) {
+    if (crosstalk_key() %in% names(y) && !"key" %in% names(x[["mapping"]]) && 
+        inherits(x[["stat"]], "StatIdentity")) {
+      x[["mapping"]] <- c(x[["mapping"]], key = as.name(crosstalk_key()))
+    }
+    x
+  }, layers, layer_data)
+  
   # Compute aesthetics to produce data with generalised variable names
   data <- by_layer(function(l, d) l$compute_aesthetics(d, plot))
-
+  
+  # add frame to group if it exists
+  data <- lapply(data, function(d) { 
+    if (!"frame" %in% names(d)) return(d)
+    d$group <- with(d, paste(group, frame, sep = "-"))
+    d
+  })
+  
   # The computed aesthetic codes the groups as integers
   # Here we build a map each of the integer values to the group label
   group_maps <- Map(function(x, y) {
@@ -186,6 +294,14 @@ gg2list <- function(p, width = NULL, height = NULL, tooltip = "all",
     }, error = function(e) NULL
     )
   }, data, groupDomains)
+  
+  # Before mapping x/y position, save the domain (for discrete scales)
+  # to display in tooltip.
+  data <- lapply(data, function(d) {
+    d[["x_plotlyDomain"]] <- d[["x"]]
+    d[["y_plotlyDomain"]] <- d[["y"]]
+    d
+  })
 
   # Transform all scales
   data <- lapply(data, ggfun("scales_transform_df"), scales = scales)
@@ -197,14 +313,34 @@ gg2list <- function(p, width = NULL, height = NULL, tooltip = "all",
   
   layout$train_position(data, scale_x(), scale_y())
   
-  # Before mapping x/y position, save the domain (for discrete scales)
-  # to display in tooltip.
-  data <- lapply(data, function(d) {
-    if (!is.null(scale_x()) && scale_x()$is_discrete()) d$x_plotlyDomain <- d$x
-    if (!is.null(scale_y()) && scale_y()$is_discrete()) d$y_plotlyDomain <- d$y
-    d
-  })
   data <- layout$map_position(data)
+  
+  # build a mapping between group and key
+  # if there are multiple keys within a group, the key is a list-column
+  reComputeGroup <- function(x, layer = NULL) {
+    # 1-to-1 link between data & visual marks -- group == key
+    if ("GeomDotplot" %in% class(layer$geom)) {
+      x <- split(x, x[["PANEL"]])
+      x <- lapply(x, function(d) { 
+        d[["group"]] <- do.call("order", d[c("x", "group")]) 
+        d 
+      })
+      x <- dplyr::bind_rows(x)
+    }
+    x
+  }
+  
+  nestedKeys <- Map(function(x, y, z) { 
+    key <- y[[crosstalk_key()]]
+    if (is.null(key) || inherits(z[["stat"]], "StatIdentity")) return(NULL)
+    x <- reComputeGroup(x, z)
+    tib <- tibble::as_tibble(x[c("PANEL", "group")])
+    tib[["key"]] <- key
+    nested <- tidyr::nest(tib, key, .key = key)
+    # reduce the dimensions of list column elements from 2 to 1
+    nested$key <- lapply(nested$key, function(x) x[[1]])
+    nested
+  }, data, layer_data, layers)
   
   # for some geoms (e.g. boxplots) plotly.js needs the "pre-statistics" data
   # we also now provide the option to return one of these two
@@ -227,6 +363,10 @@ gg2list <- function(p, width = NULL, height = NULL, tooltip = "all",
     }, error = function(e) NULL
     )
   }, data, group_maps)
+  
+  # there are some geoms (e.g. geom_dotplot()) where attaching the key 
+  # before applying the statistic can cause problems, but there is still a 
+  # 1-to-1 corresponding between graphical marks and 
 
   # Apply position adjustments
   data <- by_layer(function(l, d) l$compute_position(d, layout))
@@ -236,6 +376,7 @@ gg2list <- function(p, width = NULL, height = NULL, tooltip = "all",
   # displayed, or does it include the range of underlying data
   layout$reset_scales()
   layout$train_position(data, scale_x(), scale_y())
+  layout$setup_panel_params()
   data <- layout$map_position(data)
   
   # Train and map non-position scales
@@ -256,9 +397,6 @@ gg2list <- function(p, width = NULL, height = NULL, tooltip = "all",
     data <- lapply(data, ggfun("scales_map_df"), scales = npscales)
   }
   
-  # Train coordinate system
-  layout$train_ranges(plot$coordinates)
-  
   # Fill in defaults etc.
   data <- by_layer(function(l, d) l$compute_geom_2(d))
   
@@ -271,6 +409,15 @@ gg2list <- function(p, width = NULL, height = NULL, tooltip = "all",
   # ------------------------------------------------------------------------
   # end of ggplot_build()
   # ------------------------------------------------------------------------
+  # if necessary, attach key
+  data <- Map(function(x, y, z) { 
+    if (!length(y)) return(x)
+    x <- reComputeGroup(x, z)
+    # dplyr issue??? https://github.com/tidyverse/dplyr/issues/2701
+    attr(y$group, "n") <- NULL
+    suppressMessages(dplyr::left_join(x, y))
+  }, data, nestedKeys, layers)
+  
   # initiate plotly.js layout with some plot-wide theming stuff
   theme <- ggfun("plot_theme")(plot)
   elements <- names(which(sapply(theme, inherits, "element")))
@@ -295,7 +442,7 @@ gg2list <- function(p, width = NULL, height = NULL, tooltip = "all",
   # https://github.com/plotly/plotly.js/blob/dd1547/src/components/modebar/index.js#L171
   gglayout$margin$t <- gglayout$margin$t + 16
   
-  # important stuff like layout$panel_ranges is already flipped, but
+  # important stuff like layout$panel_params is already flipped, but
   # plot$scales/plot$labels/data aren't. We flip x/y trace data at the very end
   # and scales in the axis loop below.
   if (inherits(plot$coordinates, "CoordFlip")) {
@@ -303,51 +450,55 @@ gg2list <- function(p, width = NULL, height = NULL, tooltip = "all",
   }
   
   # important panel summary stats
-  nPanels <- nrow(layout$panel_layout)
-  nRows <- max(layout$panel_layout$ROW)
-  nCols <- max(layout$panel_layout$COL)
+  nPanels <- nrow(layout$layout)
+  nRows <- max(layout$layout$ROW)
+  nCols <- max(layout$layout$COL)
   
   # panel -> plotly.js axis/anchor info
   # (assume a grid layout by default)
-  layout$panel_layout$xaxis <- layout$panel_layout$COL
-  layout$panel_layout$yaxis <- layout$panel_layout$ROW
-  layout$panel_layout$xanchor <- nRows
-  layout$panel_layout$yanchor <- 1
+  layout$layout$xaxis <- layout$layout$COL
+  layout$layout$yaxis <- layout$layout$ROW
+  layout$layout$xanchor <- nRows
+  layout$layout$yanchor <- 1
   if (inherits(plot$facet, "FacetWrap")) {
     if (plot$facet$params$free$x) {
-      layout$panel_layout$xaxis <- layout$panel_layout$PANEL
-      layout$panel_layout$xanchor <- layout$panel_layout$ROW
+      layout$layout$xaxis <- layout$layout$PANEL
+      layout$layout$xanchor <- layout$layout$ROW
     }
     if (plot$facet$params$free$y) {
-      layout$panel_layout$yaxis <- layout$panel_layout$PANEL
-      layout$panel_layout$yanchor <- layout$panel_layout$COL
-      layout$panel_layout$xanchor <- nPanels
+      layout$layout$yaxis <- layout$layout$PANEL
+      layout$layout$yanchor <- layout$layout$COL
+      layout$layout$xanchor <- nPanels
     }
     if (plot$facet$params$free$x && plot$facet$params$free$y) {
-      layout$panel_layout$xaxis <- layout$panel_layout$PANEL
-      layout$panel_layout$yaxis <- layout$panel_layout$PANEL
-      layout$panel_layout$xanchor <- layout$panel_layout$PANEL
-      layout$panel_layout$yanchor <- layout$panel_layout$PANEL
+      layout$layout$xaxis <- layout$layout$PANEL
+      layout$layout$yaxis <- layout$layout$PANEL
+      layout$layout$xanchor <- layout$layout$PANEL
+      layout$layout$yanchor <- layout$layout$PANEL
     }
   }
   # format the axis/anchor to a format plotly.js respects
-  layout$panel_layout$xaxis <- paste0("xaxis", sub("^1$", "", layout$panel_layout$xaxis))
-  layout$panel_layout$yaxis <- paste0("yaxis", sub("^1$", "", layout$panel_layout$yaxis))
-  layout$panel_layout$xanchor <- paste0("y", sub("^1$", "", layout$panel_layout$xanchor))
-  layout$panel_layout$yanchor <- paste0("x", sub("^1$", "", layout$panel_layout$yanchor))
+  layout$layout$xaxis <- paste0("xaxis", sub("^1$", "", layout$layout$xaxis))
+  layout$layout$yaxis <- paste0("yaxis", sub("^1$", "", layout$layout$yaxis))
+  layout$layout$xanchor <- paste0("y", sub("^1$", "", layout$layout$xanchor))
+  layout$layout$yanchor <- paste0("x", sub("^1$", "", layout$layout$yanchor))
   # for some layers2traces computations, we need the range of each panel
-  layout$panel_layout$x_min <- sapply(layout$panel_ranges, function(z) min(z$x.range))
-  layout$panel_layout$x_max <- sapply(layout$panel_ranges, function(z) max(z$x.range))
-  layout$panel_layout$y_min <- sapply(layout$panel_ranges, function(z) min(z$y.range))
-  layout$panel_layout$y_max <- sapply(layout$panel_ranges, function(z) max(z$y.range))
+  layout$layout$x_min <- sapply(layout$panel_params, function(z) min(z$x.range))
+  layout$layout$x_max <- sapply(layout$panel_params, function(z) max(z$x.range))
+  layout$layout$y_min <- sapply(layout$panel_params, function(z) min(z$y.range))
+  layout$layout$y_max <- sapply(layout$panel_params, function(z) max(z$y.range))
   
   # layers -> plotly.js traces
   plot$tooltip <- tooltip
   data <- Map(function(x, y) {
-    tryCatch({x$group_plotlyDomain <- y; x}, error = function(e) x)
+    tryCatch({ x$group_plotlyDomain <- y; x }, error = function(e) x)
   }, data, groupDomains)
   
-  traces <- layers2traces(data, prestats_data, layout$panel_layout, plot)
+  # reattach crosstalk key-set attribute
+  data <- Map(function(x, y) structure(x, set = y), data, sets)
+  traces <- layers2traces(data, prestats_data, layout$layout, plot)
+  
+  gglayout <- layers2layout(gglayout, layers, layout$layout)
   
   # default to just the text in hover info, mainly because of this
   # https://github.com/plotly/plotly.js/issues/320
@@ -358,6 +509,7 @@ gg2list <- function(p, width = NULL, height = NULL, tooltip = "all",
   # show only one legend entry per legendgroup
   grps <- sapply(traces, "[[", "legendgroup")
   traces <- Map(function(x, y) {
+    if (!is.null(x[["frame"]])) return(x)
     x$showlegend <- isTRUE(x$showlegend) && y
     x
   }, traces, !duplicated(grps))
@@ -391,7 +543,7 @@ gg2list <- function(p, width = NULL, height = NULL, tooltip = "all",
       )
       # allocate enough space for the _longest_ text label
       axisTextX <- theme[["axis.text.x"]] %||% theme[["axis.text"]]
-      labz <- unlist(lapply(layout$panel_ranges, "[[", "x.labels"))
+      labz <- unlist(lapply(layout$panel_params, "[[", "x.labels"))
       lab <- labz[which.max(nchar(labz))]
       panelMarginY <- panelMarginY + axisTicksX +
         bbox(lab, axisTextX$angle, unitConvert(axisTextX, "npc", "height"))[["height"]]
@@ -403,7 +555,7 @@ gg2list <- function(p, width = NULL, height = NULL, tooltip = "all",
       )
       # allocate enough space for the _longest_ text label
       axisTextY <- theme[["axis.text.y"]] %||% theme[["axis.text"]]
-      labz <- unlist(lapply(layout$panel_ranges, "[[", "y.labels"))
+      labz <- unlist(lapply(layout$panel_params, "[[", "y.labels"))
       lab <- labz[which.max(nchar(labz))]
       panelMarginX <- panelMarginX + axisTicksY +
         bbox(lab, axisTextY$angle, unitConvert(axisTextY, "npc", "width"))[["width"]]
@@ -416,7 +568,7 @@ gg2list <- function(p, width = NULL, height = NULL, tooltip = "all",
   doms <- get_domains(nPanels, nRows, margins)
   
   for (i in seq_len(nPanels)) {
-    lay <- layout$panel_layout[i, ]
+    lay <- layout$layout[i, ]
     for (xy in c("x", "y")) {
       # find axis specific theme elements that inherit from their parent
       theme_el <- function(el) {
@@ -431,8 +583,8 @@ gg2list <- function(p, width = NULL, height = NULL, tooltip = "all",
       
       axisName <- lay[, paste0(xy, "axis")]
       anchor <- lay[, paste0(xy, "anchor")]
-      rng <- layout$panel_ranges[[i]]
-      # stuff like layout$panel_ranges is already flipped, but scales aren't
+      rng <- layout$panel_params[[i]]
+      # stuff like layout$panel_params is already flipped, but scales aren't
       sc <- if (inherits(plot$coordinates, "CoordFlip")) {
         scales$get_scales(setdiff(c("x", "y"), xy))
       } else {
@@ -443,16 +595,33 @@ gg2list <- function(p, width = NULL, height = NULL, tooltip = "all",
       # get axis title
       axisTitleText <- sc$name %||% plot$labels[[xy]] %||% ""
       if (is_blank(axisTitle)) axisTitleText <- ""
-      # https://plot.ly/r/reference/#layout-xaxis
+      
+      # is this axis dynamic?
+      isDynamic <- isTRUE(dynamicTicks) || identical(dynamicTicks, xy)
+      if (isDynamic && !p$coordinates$is_linear()) {
+        warning(
+          "`dynamicTicks` is only supported for linear (i.e., cartesian) coordinates", 
+          call. = FALSE
+        )
+      }
+      # determine axis types (note: scale_name may go away someday)
+      # https://github.com/hadley/ggplot2/issues/1312
+      isDate <- isTRUE(sc$scale_name %in% c("date", "datetime"))
+      isDateType <- isDynamic && isDate
+      isDiscrete <- identical(sc$scale_name, "position_d")
+      isDiscreteType <- isDynamic && isDiscrete
+      
       axisObj <- list(
-        type = "linear",
-        autorange = FALSE,
-        tickmode = "array",
+        # TODO: log type?
+        type = if (isDateType) "date" else if (isDiscreteType) "category" else "linear",
+        autorange = isDynamic,
         range = rng[[paste0(xy, ".range")]],
+        tickmode = if (isDynamic) "auto" else "array",
         ticktext = rng[[paste0(xy, ".labels")]],
-        # TODO: implement minor grid lines with another axis object
-        # and _always_ hide ticks/text?
         tickvals = rng[[paste0(xy, ".major")]],
+        categoryorder = "array",
+        categoryarray = rng[[paste0(xy, ".labels")]],
+        nticks = nrow(rng),
         ticks = if (is_blank(axisTicks)) "" else "outside",
         tickcolor = toRGB(axisTicks$colour),
         ticklen = unitConvert(theme$axis.ticks.length, "pixels", type),
@@ -469,22 +638,51 @@ gg2list <- function(p, width = NULL, height = NULL, tooltip = "all",
         gridwidth = unitConvert(panelGrid, "pixels", type),
         zeroline = FALSE,
         anchor = anchor,
-        title = axisTitleText,
+        title = faced(axisTitleText, axisTitle$face),
         titlefont = text2font(axisTitle)
       )
-      # convert dates to milliseconds (86400000 = 24 * 60 * 60 * 1000)
-      # this way both dates/datetimes are on same scale
-      # hopefully scale_name doesn't go away -- https://github.com/hadley/ggplot2/issues/1312
-      if (identical("date", sc$scale_name)) {
-        axisObj$range <- axisObj$range * 86400000
-        if (i == 1) {
-          traces <- lapply(traces, function(z) { z[[xy]] <- z[[xy]] * 86400000; z })
-        }
-      }
+      
       # tickvals are currently on 0-1 scale, but we want them on data scale
       axisObj$tickvals <- scales::rescale(
         axisObj$tickvals, to = axisObj$range, from = c(0, 1)
       )
+      
+      # inverse transform date data based on tickvals/ticktext
+      invert_date <- function(x, scale) {
+        if (inherits(scale, "ScaleContinuousDatetime")) {
+          as.POSIXct(x, origin = "1970-01-01", tz = scale$timezone)
+        } else {
+          as.Date(x, origin = "1970-01-01", tz = scale$timezone)
+        }
+      }
+      
+      
+      
+      if (isDateType) {
+        axisObj$range <- invert_date(axisObj$range, sc)
+        traces <- lapply(traces, function(tr) {
+          tr[[xy]] <- invert_date(tr[[xy]], sc)
+          # TODO: are there other similar cases we need to handle?
+          if (identical("bar", tr$type)) {
+            tr[["width"]] <- invert_date(tr[["width"]], sc)
+          }
+          tr
+        })
+      }
+      
+      # inverse transform categorical data based on tickvals/ticktext
+      if (isDiscreteType) {
+        traces <- lapply(traces, function(tr) { 
+          # map x/y trace data back to the 'closest' ticktext label
+          # http://r.789695.n4.nabble.com/check-for-nearest-value-in-a-vector-td4369339.html
+          tr[[xy]]<- vapply(tr[[xy]], function(val) {
+            with(axisObj, ticktext[[which.min(abs(tickvals - val))]])
+          }, character(1))
+          tr
+        })
+        if ("dodge" %in% sapply(layers, ggtype, "position")) gglayout$barmode <- "dodge"
+      }
+      
       # attach axis object to the layout
       gglayout[[axisName]] <- axisObj
       
@@ -553,7 +751,7 @@ gg2list <- function(p, width = NULL, height = NULL, tooltip = "all",
       col_txt <- paste(
         plot$facet$params$labeller(
           lay[names(plot$facet$params[[col_vars]])]
-        ), collapse = "<br>"
+        ), collapse = br()
       )
       if (is_blank(theme[["strip.text.x"]])) col_txt <- ""
       if (inherits(plot$facet, "FacetGrid") && lay$ROW != 1) col_txt <- ""
@@ -570,7 +768,7 @@ gg2list <- function(p, width = NULL, height = NULL, tooltip = "all",
       row_txt <- paste(
         plot$facet$params$labeller(
           lay[names(plot$facet$params$rows)]
-        ), collapse = "<br>"
+        ), collapse = br()
       )
       if (is_blank(theme[["strip.text.y"]])) row_txt <- ""
       if (inherits(plot$facet, "FacetGrid") && lay$COL != nCols) row_txt <- ""
@@ -655,7 +853,7 @@ gg2list <- function(p, width = NULL, height = NULL, tooltip = "all",
     # legend title annotation - https://github.com/plotly/plotly.js/issues/276
     if (isTRUE(gglayout$showlegend)) {
       legendTitles <- compact(lapply(gdefs, function(g) if (inherits(g, "legend")) g$title else NULL))
-      legendTitle <- paste(legendTitles, collapse = "<br>")
+      legendTitle <- paste(legendTitles, collapse = br())
       titleAnnotation <- make_label(
         legendTitle,
         x = gglayout$legend$x %||% 1.02,
@@ -674,42 +872,13 @@ gg2list <- function(p, width = NULL, height = NULL, tooltip = "all",
     }
   }
   
-  # geom_bar() hacks
-  geoms <- sapply(layers, ggtype, "geom")
-  if (any(idx <- geoms %in% "bar")) {
-    # since `layout.barmode` is plot-specific, we can't support multiple bar
-    # geoms with different positions
-    positions <- sapply(layers, ggtype, "position")
-    position <- unique(positions[geoms %in% "bar"])
-    if (length(position) > 1) {
-      warning("plotly doesn't support multiple positions\n",
-              "across geom_bar() layers", call. = FALSE)
-      position <- position[1]
-    }
-    # hacks for position_identity()
-    if (position == "identity") {
-      gglayout$barmode <- "overlay"
-      gglayout$legend$traceorder <- "reversed"
-    } else {
-      gglayout$barmode <- "stack"
-    }
-    # note: ggplot2 doesn't flip x/y scales when the coord is flipped
-    # (i.e., at this point, y should be the count/density)
-    is_hist <- inherits(plot$scales$get_scales("x"), "ScaleContinuous")
-    # TODO: get rid of this and use explicit width for bars
-    # https://github.com/plotly/plotly.js/issues/80
-    if (position == "dodge" || is_hist) {
-      gglayout$bargap <- 0
-    }
-  }
-  
   # flip x/y in traces for flipped coordinates
   # (we've already done appropriate flipping for axis objects)
   if (inherits(plot$coordinates, "CoordFlip")) {
     for (i in seq_along(traces)) {
       tr <- traces[[i]]
-      traces[[i]][c("x", "y")] <- tr[c("y", "x")]
-      if (tr$type %in% c("bar", "box")) traces[[i]]$orientation <- "h"
+      # TODO: move this to the layer2trace definition...
+      if (tr$type %in% "box") traces[[i]]$orientation <- "h"
       if (tr$type == "box") traces[[i]]$hoverinfo <- "x"
       names(traces[[i]])[grepl("^error_y$", names(tr))] <- "error_x"
       names(traces[[i]])[grepl("^error_x$", names(tr))] <- "error_y"
@@ -740,13 +909,15 @@ gg2list <- function(p, width = NULL, height = NULL, tooltip = "all",
     mergedTraces <- vector("list", nhashes)
     for (i in unique(hashes)) {
       idx <- which(hashes %in% i)
-      # for now we just merge markers and lines -- I can't imagine text being worthwhile
-      if (all(modes[idx] %in% c("lines", "markers"))) {
-        mergedTraces[[i]] <- Reduce(modify_list, traces[idx])
-        mergedTraces[[i]]$mode <- "markers+lines"
-        if (any(sapply(traces[idx], "[[", "showlegend"))) {
-          mergedTraces[[i]]$showlegend <- TRUE
-        }
+      mergedTraces[[i]] <- Reduce(modify_list, traces[idx])
+      mergedTraces[[i]]$mode <- paste(
+        unique(unlist(lapply(traces[idx], "[[", "mode"))), 
+        collapse = "+"
+      )
+      # show one, show all
+      show <- vapply(traces[idx], function(tr) tr$showlegend %||% TRUE, logical(1))
+      if (any(show)) {
+        mergedTraces[[i]]$showlegend <- TRUE
       }
     }
     traces <- mergedTraces
@@ -763,15 +934,13 @@ gg2list <- function(p, width = NULL, height = NULL, tooltip = "all",
   
   gglayout$width <- width
   gglayout$height <- height
-  
-  # we're now done with converting units, turn off the device,
-  # and remove the temporary file
-  grDevices::dev.off()
-  unlink(tmpPlotFile)
+  gglayout$barmode <- gglayout$barmode %||% "relative"
   
   l <- list(
     data = setNames(traces, NULL),
     layout = compact(gglayout),
+    # prevent autosize on doubleClick which clears ggplot2 margins
+    config = list(doubleClick = "reset"),
     source = source
   )
   # strip any existing 'AsIs' list elements of their 'AsIs' status.
@@ -788,7 +957,7 @@ gg2list <- function(p, width = NULL, height = NULL, tooltip = "all",
       lapply(mappings, lazyeval::f_new)
     } else {
       nms <- names(mappings)
-      setNames(lapply(nms, function(x) lazyeval::f_new(as.symbol(x))), nms)
+      setNames(lapply(nms, function(x) lazyeval::f_new(as.name(x))), nms)
     }
   })
   
@@ -807,11 +976,11 @@ gg2list <- function(p, width = NULL, height = NULL, tooltip = "all",
   l$attrs <- setNames(mappingFormulas, ids)
   l$attrs <- lapply(l$attrs, function(x) structure(x, class = "plotly_eval"))
   # the build step removes the first attrs if no type exists
-  l$attrs[[1]][["type"]] <- "ggplotly"
+  l$attrs[[1]][["type"]] <- l$data[[1]][["type"]] %||% "scatter"
   
   l$cur_data <- ids[[layerData]]
   l$visdat <- setNames(lapply(return_dat, function(x) function(y) x), ids)
-  
+
   l
 }
 

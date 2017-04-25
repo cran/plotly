@@ -13,7 +13,7 @@ test_that("simple subplot works", {
   s <- expect_traces(subplot(p1, p2), 2, "simple")
   expect_identical(s$data[[2]]$xaxis, s$layout[["yaxis2"]][["anchor"]])
   expect_identical(s$data[[2]]$yaxis, s$layout[["xaxis2"]][["anchor"]])
-  doms <- lapply(s$layout, "[[", "domain")
+  doms <- lapply(s$layout[grepl("^xaxis", names(s$layout))], "[[", "domain")
   expect_true(doms$xaxis[2] <= doms$xaxis2[1])
 })
 
@@ -23,7 +23,7 @@ test_that("nrows argument works", {
   s <- expect_traces(subplot(p1, p2, nrows = 2), 2, "simple2")
   expect_identical(s$data[[2]]$xaxis, s$layout[["yaxis2"]][["anchor"]])
   expect_identical(s$data[[2]]$yaxis, s$layout[["xaxis2"]][["anchor"]])
-  doms <- lapply(s$layout, "[[", "domain")
+  doms <- lapply(s$layout[grepl("^[x-y]axis", names(s$layout))], "[[", "domain")
   expect_true(doms$yaxis[2] > doms$yaxis[1])
   expect_true(doms$yaxis[1] > doms$yaxis2[2])
   expect_true(doms$yaxis2[2] > doms$yaxis2[1])
@@ -168,5 +168,56 @@ test_that("geo+cartesian behaves", {
   geoDom <- l$layout[[grep("^geo", names(l$layout))]]$domain
   expect_equal(geoDom$x, c(0, 1))
   expect_equal(geoDom$y, c(0, 0.68))
+})
+
+
+
+test_that("May specify legendgroup with through a vector of values", {
+  
+  # example adapted from https://github.com/ropensci/plotly/issues/817
+  df <- dplyr::bind_rows(
+    data.frame(x = rnorm(100,2), Name = "x1"),
+    data.frame(x = rnorm(100,6), Name = "x2"),
+    data.frame(x = rnorm(100,4), Name = "x3")
+  )
+  df$y <- rnorm(300)
+  
+  # marker definition...
+  m <- list(
+    size = 10, 
+    line = list(
+      width = 1, 
+      color = "black"
+    )
+  )
+  
+  base <- plot_ly(
+    df, 
+    marker = m, 
+    color = ~factor(Name), 
+    legendgroup = ~factor(Name)
+  ) 
+  
+  s <- subplot(
+    add_histogram(base, x = ~x, showlegend = FALSE),
+    plotly_empty(), 
+    add_markers(base, x = ~x, y = ~y),
+    add_histogram(base, y = ~y, showlegend = FALSE),
+    nrows = 2, heights = c(0.2, 0.8), widths = c(0.8, 0.2), 
+    shareX = TRUE, shareY = TRUE, titleX = FALSE, titleY = FALSE
+  ) %>% layout(barmode = "stack")
+  
+  # one trace for the empty plot
+  l <- expect_traces(s, 10, "subplot-legendgroup")
+  
+  # really this means show three legend items (one is blank)
+  expect_equal(
+    sum(sapply(l$data, function(tr) tr$showlegend %||% TRUE)), 4
+  )
+  
+  expect_length(
+    unlist(lapply(l$data, "[[", "legendgroup")), 9
+  )
+  
 })
 

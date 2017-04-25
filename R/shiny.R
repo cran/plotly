@@ -7,6 +7,8 @@
 #' @param width,height Must be a valid CSS unit (like \code{"100\%"},
 #'   \code{"400px"}, \code{"auto"}) or a number, which will be coerced to a
 #'   string and have \code{"px"} appended.
+#' @param inline use an inline (\code{span()}) or block container 
+#' (\code{div()}) for the output
 #' @param expr An expression that generates a plotly
 #' @param env The environment in which to evaluate \code{expr}.
 #' @param quoted Is \code{expr} a quoted expression (with \code{quote()})? This 
@@ -17,8 +19,16 @@
 #' @name plotly-shiny
 #'
 #' @export
-plotlyOutput <- function(outputId, width = "100%", height = "400px") {
-  htmlwidgets::shinyWidgetOutput(outputId, "plotly", width, height, package = "plotly")
+plotlyOutput <- function(outputId, width = "100%", height = "400px", 
+                         inline = FALSE) {
+  htmlwidgets::shinyWidgetOutput(
+    outputId = outputId, 
+    name = "plotly", 
+    width = width, 
+    height = height, 
+    inline = inline, 
+    package = "plotly"
+  )
 }
 
 #' @rdname plotly-shiny
@@ -26,8 +36,8 @@ plotlyOutput <- function(outputId, width = "100%", height = "400px") {
 renderPlotly <- function(expr, env = parent.frame(), quoted = FALSE) {
   if (!quoted) { expr <- substitute(expr) } # force quoted
   # this makes it possible to pass a ggplot2 object to renderPlotly()
-  # https://github.com/ropensci/plotly/issues/698
-  expr <- call("ggplotly", expr)
+  # https://github.com/ramnathv/htmlwidgets/issues/166#issuecomment-153000306
+  expr <- as.call(list(call("::", quote("plotly"), quote("ggplotly")), expr))
   shinyRenderWidget(expr, plotlyOutput, env, quoted = TRUE)
 }
 
@@ -38,9 +48,9 @@ renderPlotly <- function(expr, env = parent.frame(), quoted = FALSE) {
 #' 
 #' @param event The type of plotly event. Currently 'plotly_hover',
 #' 'plotly_click', 'plotly_selected', and 'plotly_relayout' are supported.
-#' @param source Which plot should the listener be tied to? This 
-#' (character string) should match the value of \code{source} in 
-#' \code{\link{plot_ly}()}.
+#' @param source a character string of length 1. Match the value of this string 
+#' with the source argument in \code{\link{plot_ly}()} to retrieve the 
+#' event data corresponding to a specific plot (shiny apps can have multiple plots).
 #' @param session a shiny session object (the default should almost always be used).
 #' @export
 #' @author Carson Sievert

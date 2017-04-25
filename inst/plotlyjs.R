@@ -1,8 +1,9 @@
 library(httr)
+# download latest GitHub release
 x <- GET('https://api.github.com/repos/plotly/plotly.js/releases/latest')
 zip <- content(x)$zipball_url
 # for a particular version:
-# zip <- "https://github.com/plotly/plotly.js/archive/v1.16.3.zip"
+# zip <- "https://github.com/plotly/plotly.js/archive/v1.25.0.zip"
 tmp <- tempfile(fileext = ".zip")
 download.file(zip, tmp)
 unzip(tmp)
@@ -15,6 +16,12 @@ unlink("*plotly.js*", recursive = T)
 message("Manually update plotly.yaml with this version")
 basename(zip)
 
+
+# download latest build from master 
+#download.file(
+#  "https://raw.githubusercontent.com/plotly/plotly.js/master/dist/plotly.min.js", 
+#  destfile = "inst/htmlwidgets/lib/plotlyjs/plotly-latest.min.js"
+#)
 
 
 #' Update plotly's internal traces information

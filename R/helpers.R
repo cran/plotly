@@ -4,6 +4,8 @@
 #' @param ... arguments are documented here 
 #' \url{https://plot.ly/r/reference/#scatter-marker-colorbar}.
 #' @param limits numeric vector of length 2. Set the extent of the colorbar scale.
+#' @param which colorbar to modify? Should only be relevant for subplots with 
+#' multiple colorbars.
 #' @author Carson Sievert
 #' @export
 #' @examples 
@@ -25,50 +27,58 @@
 #'  add_heatmap() %>%
 #'  colorbar(limits = c(-1, 1))
 
-colorbar <- function(p, ..., limits = NULL) {
-  p <- plotly_build(p)
-  isBar <- vapply(p$x$data, is.colorbar, logical(1))
-  if (sum(isBar) != 1) {
-    stop("This function only works with one colorbar")
-  }
-  tr <- p$x$data[[which(isBar)]]
-  hasZcolor <- inherits(tr, "zcolor")
+colorbar <- function(p, ..., limits = NULL, which = 1) {
+  colorbar_built(plotly_build(p), ..., limits = limits, which = which)
+}
+
+colorbar_built <- function(p, ..., limits = NULL, which = 1) {
   
-  # retrain limits of the colorscale
-  if (!is.null(limits)) {
-    limits <- sort(limits)
-    if (hasZcolor) {
-      z <- p$x$data[[which(isBar)]][["z"]]
-      if (!is.null(dz <- dim(z))) {
-        z <- c(z)
+  isBar <- vapply(p$x$data, is.colorbar, logical(1))
+  if (sum(isBar) == 0) {
+    warning("Didn't find a colorbar to modify.", call. = FALSE)
+    return(p)
+  }
+  
+  indicies <- which(isBar)[which]
+  
+  for (i in indicies) {
+    
+    tr <- p$x$data[[i]]
+    hasZcolor <- inherits(tr, "zcolor")
+    
+    # retrain limits of the colorscale
+    if (!is.null(limits)) {
+      limits <- sort(limits)
+      if (hasZcolor) {
+        z <- p$x$data[[i]][["z"]]
+        if (!is.null(dz <- dim(z))) {
+          z <- c(z)
+        }
+        z[z < limits[1] | limits[2] < z] <- NA
+        if (!is.null(dz)) dim(z) <- dz
+        p$x$data[[i]]$z <- z
+        p$x$data[[i]]$zmin <- limits[1]
+        p$x$data[[i]]$zmax <- limits[2]
+      } else {
+        # since the colorscale is in a different trace, retrain all traces
+        p$x$data <- lapply(p$x$data, function(x) {
+          col <- x$marker[["color"]]
+          x$marker[["color"]][col < limits[1] | limits[2] < col] <- NA
+          x$marker[["cmin"]] <- limits[1]
+          x$marker[["cmax"]] <- limits[2]
+          x
+        })
       }
-      z[z < limits[1] | limits[2] < z] <- NA
-      if (!is.null(dz)) dim(z) <- dz
-      p$x$data[[which(isBar)]]$z <- z
-      p$x$data[[which(isBar)]]$zmin <- limits[1]
-      p$x$data[[which(isBar)]]$zmax <- limits[2]
+    }
+    
+    # pass along ... to the colorbar
+    if (hasZcolor) {
+      p$x$data[[i]]$colorbar <- modify_list(tr$colorbar, list(...))
     } else {
-      # since the colorscale is in a different trace, retrain all traces
-      p$x$data <- lapply(p$x$data, function(x) {
-        col <- x$marker[["color"]]
-        x$marker[["color"]][col < limits[1] | limits[2] < col] <- NA
-        x$marker[["cmin"]] <- limits[1]
-        x$marker[["cmax"]] <- limits[2]
-        x
-      })
+      p$x$data[[i]]$marker$colorbar <- modify_list(tr$marker$colorbar, list(...))
     }
   }
   
-  # pass along ... to the colorbar
-  if (hasZcolor) {
-    p$x$data[[which(isBar)]][["colorbar"]] <- modify_list(
-      tr[["colorbar"]], list(...)
-    )
-  } else {
-    p$x$data[[which(isBar)]]$marker$colorbar <- modify_list(
-      tr$marker$colorbar, list(...)
-    )
-  }
   p
 }
 
@@ -120,18 +130,10 @@ hide_colorbar <- function(p) {
 #' hide_legend(p)
 
 hide_legend <- function(p) {
-  p <- plotly_build(p)
-  # annotations have to be an array of objects, so this should be a list of lists
-  ann <- p$x$layout$annotations
-  for (i in seq_along(ann)) {
-    if (isTRUE(ann[[i]]$legendTitle)) {
-      p$x$layout$annotations[[i]] <- NULL
-    }
+  if (ggplot2::is.ggplot(p)) {
+    p <- plotly_build(p)
   }
-  if (length(p$x$layout$annotations) == 0) {
-    p$x$layout$annotations <- NULL
-  }
-  p$x$layout$showlegend <- FALSE
+  p$x$.hideLegend <- TRUE
   p
 }
 
@@ -171,3 +173,45 @@ plotly_empty <- function(...) {
 }
 
 
+#' Convert a raster object to a data URI
+#' 
+#' Convenient embedding images via \code{\link{layout}()}
+#' \href{images}{https://plot.ly/r/reference/#layout-images}.
+#' 
+#' @param r an object coercable to a raster object via \code{\link{as.raster}()}
+#' @param ... arguments passed onto \code{\link{as.raster}()}.
+#' @author Carson Sievert
+#' @export
+#' @examples
+#' 
+#' # a red gradient (from ?as.raster)
+#' r <- as.raster(matrix(hcl(0, 80, seq(50, 80, 10)), nrow = 4, ncol = 5))
+#' plot(r)
+#' 
+#' # embed the raster as an image
+#' plot_ly(x = 1, y = 1) %>% 
+#'   layout(
+#'     images = list(list(
+#'      source = raster2uri(r),
+#'      xref = "paper", 
+#'      yref = "paper", 
+#'      x = 0, y = 0, 
+#'      sizex = 0.5, sizey = 0.5, 
+#'      xanchor = "left", yanchor = "bottom"
+#'   ))
+#'  ) 
+
+raster2uri <- function(r, ...) {
+  try_library("png", "raster2uri")
+  # should be 4 x n matrix
+  r <- grDevices::as.raster(r, ...)
+  rgbs <- col2rgb(c(r), alpha = T) / 255
+  nr <- dim(r)[1]
+  nc <- dim(r)[2]
+  reds <- matrix(rgbs[1, ], nrow = nr, ncol = nc, byrow = TRUE)
+  greens <- matrix(rgbs[2, ], nrow = nr, ncol = nc, byrow = TRUE)
+  blues <- matrix(rgbs[3, ], nrow = nr, ncol = nc, byrow = TRUE)
+  alphas <- matrix(rgbs[4, ], nrow = nr, ncol = nc, byrow = TRUE)
+  png <- array(c(reds, greens, blues, alphas), dim = c(dim(r), 4))
+  base64enc::dataURI(png::writePNG(png), mime = "image/png")
+}
