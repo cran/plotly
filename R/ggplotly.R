@@ -165,43 +165,19 @@ gg2list <- function(p, width = NULL, height = NULL,
                     tooltip = "all", dynamicTicks = FALSE, 
                     layerData = 1, originalData = TRUE, source = "A", ...) {
   
-  # check the value of dynamicTicks
-  dynamicValues <- c(FALSE, TRUE, "x", "y")
-  if (length(setdiff(dynamicTicks, dynamicValues))) {
-   stop(
-     sprintf(
-       "`dynamicValues` accepts the following values: '%s'", 
-       paste(dynamicValues, collapse = "', '")
-     ), call. = FALSE
-    )
-  }
-  
-  # we currently support ggplot2 >= 2.2.1 (see DESCRIPTION)
-  # there are too many naming changes in 2.2.1.9000 to realistically 
-  if (packageVersion("ggplot2") == "2.2.1") {
-    warning(
-      "We recommend that you use the dev version of ggplot2 with `ggplotly()`\n",
-      "Install it with: `devtools::install_github('hadley/ggplot2')`", call. = FALSE
-    )
-    if (!identical(dynamicTicks, FALSE)) {
-      warning(
-        "You need the dev version of ggplot2 to use `dynamicTicks`", call. = FALSE
-      )
-    }
-    return(
-      gg2list_legacy(
-        p, width = width, height = height, tooltip = tooltip,
-        layerData = layerData, originalData = originalData, source = source, ...
-      )
-    )
-  }
-  
   # To convert relative sizes correctly, we use grid::convertHeight(),
   # which may open a new *screen* device, if none is currently open. 
-  # It is undesirable to both open a *screen* device and leave a new device
-  # open, so if required, we open a non-screen device now, and close on exit 
-  # see https://github.com/att/rcloud.htmlwidgets/issues/2
-  if (is.null(grDevices::dev.list()) || identical(Sys.getenv("RSTUDIO"), "1")) {
+  # To avoid undesirable side effects, we may need to open a 
+  # non-interactive device and close it on exit...
+  # https://github.com/att/rcloud.htmlwidgets/issues/2
+  
+  # Note that we never have to open a non-interactive device 
+  # in RStudio since it ships with one...
+  rStudioDevSize <- if (is_rstudio()) grDevices::dev.size("px")
+  width <- width %||% rStudioDevSize[1]
+  height <- height %||% rStudioDevSize[2]
+  # note that calling dev.size() (inside RStudio) will add it to the list
+  if (is.null(grDevices::dev.list())) {
     dev_fun <- if (system.file(package = "Cairo") != "") {
       Cairo::Cairo
     } else if (capabilities("png")) {
@@ -220,6 +196,38 @@ gg2list <- function(p, width = NULL, height = NULL,
     }
     dev_fun(file = tempfile(), width = width %||% 640, height = height %||% 480)
     on.exit(grDevices::dev.off(), add = TRUE)
+  }
+  
+  
+  # check the value of dynamicTicks
+  dynamicValues <- c(FALSE, TRUE, "x", "y")
+  if (length(setdiff(dynamicTicks, dynamicValues))) {
+   stop(
+     sprintf(
+       "`dynamicValues` accepts the following values: '%s'", 
+       paste(dynamicValues, collapse = "', '")
+     ), call. = FALSE
+    )
+  }
+  
+  # we currently support ggplot2 >= 2.2.1 (see DESCRIPTION)
+  # there are too many naming changes in 2.2.1.9000 to realistically 
+  if (!is_dev_ggplot2()) {
+    message(
+      "We recommend that you use the dev version of ggplot2 with `ggplotly()`\n",
+      "Install it with: `devtools::install_github('hadley/ggplot2')`"
+    )
+    if (!identical(dynamicTicks, FALSE)) {
+      warning(
+        "You need the dev version of ggplot2 to use `dynamicTicks`", call. = FALSE
+      )
+    }
+    return(
+      gg2list_legacy(
+        p, width = width, height = height, tooltip = tooltip,
+        layerData = layerData, originalData = originalData, source = source, ...
+      )
+    )
   }
   
   # ------------------------------------------------------------------------
@@ -483,10 +491,10 @@ gg2list <- function(p, width = NULL, height = NULL,
   layout$layout$xanchor <- paste0("y", sub("^1$", "", layout$layout$xanchor))
   layout$layout$yanchor <- paste0("x", sub("^1$", "", layout$layout$yanchor))
   # for some layers2traces computations, we need the range of each panel
-  layout$layout$x_min <- sapply(layout$panel_params, function(z) min(z$x.range))
-  layout$layout$x_max <- sapply(layout$panel_params, function(z) max(z$x.range))
-  layout$layout$y_min <- sapply(layout$panel_params, function(z) min(z$y.range))
-  layout$layout$y_max <- sapply(layout$panel_params, function(z) max(z$y.range))
+  layout$layout$x_min <- sapply(layout$panel_params, function(z) min(z$x.range %||% z$x_range))
+  layout$layout$x_max <- sapply(layout$panel_params, function(z) max(z$x.range %||% z$x_range))
+  layout$layout$y_min <- sapply(layout$panel_params, function(z) min(z$y.range %||% z$y_range))
+  layout$layout$y_max <- sapply(layout$panel_params, function(z) max(z$y.range %||% z$y_range))
   
   # layers -> plotly.js traces
   plot$tooltip <- tooltip
@@ -496,7 +504,7 @@ gg2list <- function(p, width = NULL, height = NULL,
   
   # reattach crosstalk key-set attribute
   data <- Map(function(x, y) structure(x, set = y), data, sets)
-  traces <- layers2traces(data, prestats_data, layout$layout, plot)
+  traces <- layers2traces(data, prestats_data, layout, plot)
   
   gglayout <- layers2layout(gglayout, layers, layout$layout)
   
@@ -584,6 +592,60 @@ gg2list <- function(p, width = NULL, height = NULL,
       axisName <- lay[, paste0(xy, "axis")]
       anchor <- lay[, paste0(xy, "anchor")]
       rng <- layout$panel_params[[i]]
+      
+      # panel_params is quite different for "CoordSf"
+      if ("CoordSf" %in% class(p$coordinates)) {
+        # see CoordSf$render_axis_v
+        direction <- if (xy == "x") "E" else "N"
+        idx <- rng$graticule$type == direction & !is.na(rng$graticule$degree_label)
+        tickData <- rng$graticule[idx, ]
+        # TODO: how to convert a language object to unicode character string?
+        rng[[paste0(xy, ".labels")]] <- as.character(tickData[["degree_label"]])
+        rng[[paste0(xy, ".major")]] <- tickData[[paste0(xy, "_start")]]
+        
+        # If it doesn't already exist (for this panel), 
+        # generate graticule (as done in, CoordSf$render_bg)
+        isGrill <- vapply(traces, function(tr) {
+          identical(tr$xaxis, lay$xaxis) && 
+            identical(tr$yaxis, lay$yaxis) &&
+            isTRUE(tr$`_isGraticule`)
+        }, logical(1))
+        
+        if (sum(isGrill) == 0) {
+          d <- expand(rng$graticule)
+          d$x <- scales::rescale(d$x, rng$x_range, from = c(0, 1))
+          d$y <- scales::rescale(d$y, rng$y_range, from = c(0, 1))
+          params <- list(
+            colour = theme$panel.grid.major$colour,
+            size = theme$panel.grid.major$size,
+            linetype = theme$panel.grid.major$linetype
+          )
+          grill <- geom2trace.GeomPath(d, params)
+          grill$hoverinfo <- "none"
+          grill$showlegend <- FALSE
+          grill$`_isGraticule` <- TRUE
+          grill$xaxis <- lay$xaxis
+          grill$yaxis <- lay$yaxis
+          
+          traces <- c(list(grill), traces)
+        }
+        
+        # if labels are empty, don't show axis ticks
+        emptyTicks <- all(with(
+          rng$graticule, sapply(degree_label, is.na) | sapply(degree_label, nchar) == 0
+        ))
+        if (emptyTicks) {
+          theme$axis.ticks.length <- 0
+        } else{
+          # convert the special *degree expression in plotmath to HTML entity
+          # TODO: can this be done more generally for all ?
+          rng[[paste0(xy, ".labels")]] <- sub(
+            "\\*\\s+degree[ ]?[\\*]?", "&#176;", rng[[paste0(xy, ".labels")]]
+          )
+        }
+        
+      }
+      
       # stuff like layout$panel_params is already flipped, but scales aren't
       sc <- if (inherits(plot$coordinates, "CoordFlip")) {
         scales$get_scales(setdiff(c("x", "y"), xy))
@@ -615,7 +677,7 @@ gg2list <- function(p, width = NULL, height = NULL,
         # TODO: log type?
         type = if (isDateType) "date" else if (isDiscreteType) "category" else "linear",
         autorange = isDynamic,
-        range = rng[[paste0(xy, ".range")]],
+        range = rng[[paste0(xy, ".range")]] %||% rng[[paste0(xy, "_range")]],
         tickmode = if (isDynamic) "auto" else "array",
         ticktext = rng[[paste0(xy, ".labels")]],
         tickvals = rng[[paste0(xy, ".major")]],
@@ -632,7 +694,8 @@ gg2list <- function(p, width = NULL, height = NULL,
         showline = !is_blank(axisLine),
         linecolor = toRGB(axisLine$colour),
         linewidth = unitConvert(axisLine, "pixels", type),
-        showgrid = !is_blank(panelGrid),
+        # TODO: always `showgrid=FALSE` and implement our own using traces
+        showgrid = !is_blank(panelGrid) && !"CoordSf" %in% class(p$coordinates),
         domain = sort(as.numeric(doms[i, paste0(xy, c("start", "end"))])),
         gridcolor = toRGB(panelGrid$colour),
         gridwidth = unitConvert(panelGrid, "pixels", type),
@@ -641,6 +704,22 @@ gg2list <- function(p, width = NULL, height = NULL,
         title = faced(axisTitleText, axisTitle$face),
         titlefont = text2font(axisTitle)
       )
+      
+      # set scaleanchor/scaleratio if these are fixed coordinates
+      fixed_coords <- c("CoordSf", "CoordFixed", "CoordMap", "CoordQuickmap")
+      if (inherits(p$coordinates, fixed_coords)) {
+        axisObj$scaleanchor <- anchor
+        ratio <- p$coordinates$ratio %||% p$coordinates$aspect(rng) %||% 1
+        axisObj$scaleratio <- if (xy == "y") ratio else 1 / ratio
+      }
+      
+      # TODO: should we implement aspect ratios?
+      if (!is.null(theme$aspect.ratio)) {
+        warning(
+          "Aspect ratios aren't yet implemented, but you can manually set", 
+          " a suitable height/width", call. = FALSE
+        )
+      }
       
       # tickvals are currently on 0-1 scale, but we want them on data scale
       axisObj$tickvals <- scales::rescale(
@@ -655,8 +734,6 @@ gg2list <- function(p, width = NULL, height = NULL,
           as.Date(x, origin = "1970-01-01", tz = scale$timezone)
         }
       }
-      
-      
       
       if (isDateType) {
         axisObj$range <- invert_date(axisObj$range, sc)
@@ -785,6 +862,7 @@ gg2list <- function(p, width = NULL, height = NULL,
     }
   } # end of panel loop
   
+  
   # ------------------------------------------------------------------------
   # guide conversion
   #   Strategy: Obtain and translate the output of ggplot2:::guides_train().
@@ -877,9 +955,12 @@ gg2list <- function(p, width = NULL, height = NULL,
   if (inherits(plot$coordinates, "CoordFlip")) {
     for (i in seq_along(traces)) {
       tr <- traces[[i]]
-      # TODO: move this to the layer2trace definition...
-      if (tr$type %in% "box") traces[[i]]$orientation <- "h"
-      if (tr$type == "box") traces[[i]]$hoverinfo <- "x"
+      # flipping logic for bar positioning is in geom2trace.GeomBar
+      if (tr$type != "bar") traces[[i]][c("x", "y")] <- tr[c("y", "x")]
+      if (tr$type %in% "box") {
+        traces[[i]]$orientation <- "h"
+        traces[[i]]$hoverinfo <- "x"
+      }
       names(traces[[i]])[grepl("^error_y$", names(tr))] <- "error_x"
       names(traces[[i]])[grepl("^error_x$", names(tr))] <- "error_y"
     }
@@ -1181,6 +1262,10 @@ rect2shape <- function(rekt = ggplot2::element_rect()) {
     yref = "paper",
     xref = "paper"
   )
+}
+
+is_dev_ggplot2 <- function() {
+  packageVersion("ggplot2") > "2.2.1"
 }
 
 # We need access to internal ggplot2 functions in several places
