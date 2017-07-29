@@ -1,3 +1,24 @@
+# 4.7.1
+
+## NEW FEATURES & IMPROVEMENTS
+
+* It is now possible to modify (i.e., update without a full redraw) plotly graphs inside of a shiny app via the new `plotlyProxy()` and `plotlyProxyInvoke()` functions. For examples, see `plotly_example("shiny", "proxy_relayout")` and `plotly_example("shiny", "proxy_mapbox")`. Closes #580. 
+* Added a new `plotly_example()` function to make it easier to run shiny/rmarkdown examples included with the package under the `inst/examples` directory.
+* The `schema()` function now returns the plot schema (rather just printing it), making it easier to acquire/use values from the official plot schema. See `help(schema)` for an example. Fixes #1038.
+
+## CHANGES
+
+* Upgraded to plotly.js v1.29.2 -- https://github.com/plotly/plotly.js/releases/tag/v1.29.2
+
+## BUG FIXES
+
+* The default sizing in `ggplotly()` is no longer fixed to the device size inside RStudio. Fixes #1033.
+* Removed use of `ArrayBuffer.isView()`, which should fix rendering issues on plaforms that don't have a typed array polyfill (e.g., RStudio on Windows). Fixes #1055.
+* `event_data("plotly_relayout")` no longer fires `NULL` for any event. Fixes #1039.
+* Fixed a bug when using `color` with scattermapbox/scattergeo. Fixes #1038.
+* Fixed a highlighting bug when brushing multiple points with `marker.color` as an array. Fixes #1084.
+
+
 # 4.7.0
 
 ## NEW FEATURES & IMPROVEMENTS
@@ -200,7 +221,7 @@ limits.
 
 ## BUG FIXES
 
-* `event_data()` now works inside shiny modules (#659). For an example, see <https://github.com/ropensci/plotly/tree/master/inst/examples/plotlyShinyModules>
+* `event_data()` now works inside shiny modules (#659). For an example, see <https://github.com/ropensci/plotly/tree/master/inst/examples/shiny/event_data_modules>
 
 # 4.3.6 -- 9 September 2016
 

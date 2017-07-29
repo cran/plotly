@@ -1,6 +1,6 @@
 Package: plotly
 Title: Create Interactive Web Graphics via 'plotly.js'
-Version: 4.7.0
+Version: 4.7.1
 Authors@R: c(person("Carson", "Sievert", role = c("aut", "cre"),
     email = "cpsievert1@gmail.com"),
     person("Chris", "Parmer", role = "aut",
@@ -23,7 +23,7 @@ URL: https://plot.ly/r, https://cpsievert.github.io/plotly_book/,
 BugReports: https://github.com/ropensci/plotly/issues
 Depends: R (>= 3.2.0), ggplot2 (>= 2.2.1)
 Imports: tools, scales, httr, jsonlite, magrittr, digest, viridisLite,
-        base64enc, htmltools, htmlwidgets (>= 0.8), tidyr, hexbin,
+        base64enc, htmltools, htmlwidgets (>= 0.9), tidyr, hexbin,
         RColorBrewer, dplyr, tibble, lazyeval (>= 0.2.0), crosstalk,
         purrr, data.table
 Suggests: MASS, maps, ggthemes, GGally, testthat, knitr, devtools,
@@ -33,7 +33,7 @@ Suggests: MASS, maps, ggthemes, GGally, testthat, knitr, devtools,
 LazyData: true
 RoxygenNote: 6.0.1
 NeedsCompilation: no
-Packaged: 2017-05-26 14:13:45 UTC; cpsievert
+Packaged: 2017-07-28 15:49:30 UTC; cpsievert
 Author: Carson Sievert [aut, cre],
   Chris Parmer [aut],
   Toby Hocking [aut],
@@ -44,4 +44,4 @@ Author: Carson Sievert [aut, cre],
   Plotly Technologies Inc. [cph]
 Maintainer: Carson Sievert <cpsievert1@gmail.com>
 Repository: CRAN
-Date/Publication: 2017-05-28 07:42:36 UTC
+Date/Publication: 2017-07-29 05:16:25 UTC
