@@ -7,6 +7,9 @@
 #' graphics device (if no device is open, width/height of a new (off-screen) 
 #' device defaults to 640/480). In other words, `height` and
 #' `width` must be specified at runtime to ensure sizing is correct.
+#' For examples on how to specify the output container's `height`/`width` in a 
+#' shiny app, see `plotly_example("shiny", "ggplotly_sizing")`.
+#' 
 #'
 #' @param p a ggplot object.
 #' @param width Width of the plot in pixels (optional, defaults to automatic sizing).
@@ -43,28 +46,33 @@
 #'   geom_point(aes(text = name, size = pop), colour = "red", alpha = 1/2)
 #' ggplotly(viz, tooltip = c("text", "size"))
 #' 
+#' # linked scatterplot brushing
+#' d <- highlight_key(mtcars)
+#' qplot(data = d, x = mpg, y = wt) %>%
+#'   subplot(qplot(data = d, x = mpg, y = vs)) %>% 
+#'   layout(title = "Click and drag to select points") %>%
+#'   highlight("plotly_selected")
 #' 
-#' # highlighting lines
-#' demo("highlight-ggplotly", package = "plotly")
 #' 
-#' # client-side linked brushing
-#' library(crosstalk)
-#' d <- SharedData$new(mtcars)
-#' subplot(
-#'  qplot(data = d, x = mpg, y = wt),
-#'  qplot(data = d, x = mpg, y = vs)
-#' )
+#' # more brushing (i.e. highlighting) examples
+#' demo("crosstalk-highlight-ggplotly", package = "plotly")
 #' 
 #' # client-side linked brushing in a scatterplot matrix
-#' SharedData$new(iris) %>%
+#' highlight_key(iris) %>%
 #'   GGally::ggpairs(aes(colour = Species), columns = 1:4) %>%
-#'   ggplotly(tooltip = c("x", "y", "colour"))
+#'   ggplotly(tooltip = c("x", "y", "colour")) %>%
+#'   highlight("plotly_selected")
 #' }
 #'
 ggplotly <- function(p = ggplot2::last_plot(), width = NULL, height = NULL,
                      tooltip = "all", dynamicTicks = FALSE, 
                      layerData = 1, originalData = TRUE, source = "A", ...) {
   UseMethod("ggplotly", p)
+}
+
+#' @export
+ggplotly.NULL <- function(...) {
+  htmltools::browsable(htmltools::div(...))
 }
 
 #' @export
@@ -166,36 +174,30 @@ gg2list <- function(p, width = NULL, height = NULL,
                     layerData = 1, originalData = TRUE, source = "A", ...) {
   
   # To convert relative sizes correctly, we use grid::convertHeight(),
-  # which may open a new *screen* device, if none is currently open. 
-  # To avoid undesirable side effects, we may need to open a 
-  # non-interactive device and close it on exit...
-  # https://github.com/att/rcloud.htmlwidgets/issues/2
-  
-  # Note that we never have to open a non-interactive device 
-  # in RStudio since it ships with one. Plus, calling dev.size()
-  # adds it to dev.list() & should ensure grid can query the correct device size
-  rStudioDevSize <- if (is_rstudio()) grDevices::dev.size("px")
-  
-  if (is.null(grDevices::dev.list())) {
-    dev_fun <- if (system.file(package = "Cairo") != "") {
-      Cairo::Cairo
-    } else if (capabilities("png")) {
-      grDevices::png
-    } else if (capabilities("jpeg")) {
-      grDevices::jpeg 
-    } else {
-      stop(
-        "No graphics device is currently open and no cairo or bitmap device is available.\n", 
-        "A graphics device is required to convert sizes correctly. You have three options:",
-        "  (1) Open a graphics device (with the desired size)  using ggplotly()",
-        "  (2) install.packages('Cairo')",
-        "  (3) compile R to use a bitmap device (png or jpeg)",
-        call. = FALSE
-      )
-    }
-    dev_fun(file = tempfile(), width = width %||% 640, height = height %||% 480)
-    on.exit(grDevices::dev.off(), add = TRUE)
+  # which requires a known output (device) size.
+  dev_fun <- if (system.file(package = "Cairo") != "") {
+    Cairo::Cairo
+  } else if (capabilities("png")) {
+    grDevices::png
+  } else if (capabilities("jpeg")) {
+    grDevices::jpeg 
+  } else {
+    stop(
+      "No Cairo or bitmap device is available. Such a graphics device is required to convert sizes correctly in ggplotly().\n\n", 
+      " You have two options:\n",
+      "  (1) install.packages('Cairo')\n",
+      "  (2) compile R to use a bitmap device (png or jpeg)",
+      call. = FALSE
+    )
   }
+  # if a device (or RStudio) is already open, use the device size as default size
+  if (!is.null(grDevices::dev.list()) || is_rstudio()) {
+    width <- width %||% default(grDevices::dev.size("px")[1])
+    height <- height %||% default(grDevices::dev.size("px")[2])
+  }
+  # open the device and make sure it closes on exit
+  dev_fun(file = tempfile(), width = width %||% 640, height = height %||% 480)
+  on.exit(grDevices::dev.off(), add = TRUE)
   
   # check the value of dynamicTicks
   dynamicValues <- c(FALSE, TRUE, "x", "y")
@@ -205,26 +207,6 @@ gg2list <- function(p, width = NULL, height = NULL,
        "`dynamicValues` accepts the following values: '%s'", 
        paste(dynamicValues, collapse = "', '")
      ), call. = FALSE
-    )
-  }
-  
-  # we currently support ggplot2 >= 2.2.1 (see DESCRIPTION)
-  # there are too many naming changes in 2.2.1.9000 to realistically 
-  if (!is_dev_ggplot2()) {
-    message(
-      "We recommend that you use the dev version of ggplot2 with `ggplotly()`\n",
-      "Install it with: `devtools::install_github('hadley/ggplot2')`"
-    )
-    if (!identical(dynamicTicks, FALSE)) {
-      warning(
-        "You need the dev version of ggplot2 to use `dynamicTicks`", call. = FALSE
-      )
-    }
-    return(
-      gg2list_legacy(
-        p, width = width, height = height, tooltip = tooltip,
-        layerData = layerData, originalData = originalData, source = source, ...
-      )
     )
   }
   
@@ -261,10 +243,8 @@ gg2list <- function(p, width = NULL, height = NULL,
   
   # save the domain of the group for display in tooltips
   groupDomains <- Map(function(x, y) {
-    tryCatch(
-      eval(y$mapping[["group"]] %||% plot$mapping[["group"]], x), 
-      error = function(e) NULL
-    )
+    aes_g <- y$mapping[["group"]] %||% plot$mapping[["group"]]
+    tryNULL(rlang::eval_tidy(aes_g, x))
   }, data, layers)
   
   # for simple (StatIdentity) geoms, add crosstalk key to aes mapping
@@ -593,7 +573,7 @@ gg2list <- function(p, width = NULL, height = NULL,
       axisText <- theme_el("axis.text")
       axisTitle <- theme_el("axis.title")
       axisLine <- theme_el("axis.line")
-      panelGrid <- theme_el("panel.grid.major")
+      panelGrid <- theme_el("panel.grid.major") %||% theme_el("panel.grid") 
       stripText <- theme_el("strip.text")
       
       axisName <- lay[, paste0(xy, "axis")]
@@ -619,20 +599,21 @@ gg2list <- function(p, width = NULL, height = NULL,
         }, logical(1))
         
         if (sum(isGrill) == 0) {
-          d <- expand(rng$graticule)
+          # TODO: reduce the number of points (via coord_munch?)
+          d <- fortify_sf(rng$graticule)
           d$x <- scales::rescale(d$x, rng$x_range, from = c(0, 1))
           d$y <- scales::rescale(d$y, rng$y_range, from = c(0, 1))
           params <- list(
-            colour = theme$panel.grid.major$colour,
-            size = theme$panel.grid.major$size,
-            linetype = theme$panel.grid.major$linetype
+            colour = panelGrid$colour, 
+            size = panelGrid$size, 
+            linetype = panelGrid$linetype
           )
           grill <- geom2trace.GeomPath(d, params)
           grill$hoverinfo <- "none"
           grill$showlegend <- FALSE
           grill$`_isGraticule` <- TRUE
-          grill$xaxis <- lay$xaxis
-          grill$yaxis <- lay$yaxis
+          grill$xaxis <- sub("axis", "", lay$xaxis)
+          grill$yaxis <- sub("axis", "", lay$yaxis)
           
           traces <- c(list(grill), traces)
         }
@@ -711,14 +692,28 @@ gg2list <- function(p, width = NULL, height = NULL,
       )
       
       # set scaleanchor/scaleratio if these are fixed coordinates
+      # the logic here is similar to what p$coordinates$aspect() does,
+      # but the ratio is scaled to the data range by plotly.js 
       fixed_coords <- c("CoordSf", "CoordFixed", "CoordMap", "CoordQuickmap")
       if (inherits(p$coordinates, fixed_coords)) {
         axisObj$scaleanchor <- anchor
-        ratio <- p$coordinates$ratio %||% p$coordinates$aspect(rng) %||% 1
+        ratio <- p$coordinates$ratio %||% 1
         axisObj$scaleratio <- if (xy == "y") ratio else 1 / ratio
+        
+        if (inherits(p$coordinates, "CoordSf")) {
+          if (isTRUE(sf::st_is_longlat(rng$crs))) {
+            ratio <- cos(mean(rng$y_range) * pi/180)
+          }
+          # note how ratio is flipped in CoordSf$aspect() vs CoordFixed$aspect()
+          axisObj$scaleratio <- if (xy == "y") 1 / ratio else ratio
+        }
       }
       
-      # TODO: should we implement aspect ratios?
+      # TODO: seems like we _could_ support this with scaleanchors, 
+      # but inverse transform by the panel ranges?
+      # also, note how aspect.ratio overwrites fixed coordinates:
+      # ggplot(mtcars, aes(wt, mpg)) + geom_point() + coord_fixed(0.5)
+      # ggplot(mtcars, aes(wt, mpg)) + geom_point() + coord_fixed(0.5) + theme(aspect.ratio = 1)
       if (!is.null(theme$aspect.ratio)) {
         warning(
           "Aspect ratios aren't yet implemented, but you can manually set", 
@@ -961,8 +956,8 @@ gg2list <- function(p, width = NULL, height = NULL,
     for (i in seq_along(traces)) {
       tr <- traces[[i]]
       # flipping logic for bar positioning is in geom2trace.GeomBar
-      if (tr$type != "bar") traces[[i]][c("x", "y")] <- tr[c("y", "x")]
-      if (tr$type %in% "box") {
+      if (!identical(tr$type, "bar")) traces[[i]][c("x", "y")] <- tr[c("y", "x")]
+      if (identical(tr$type, "box")) {
         traces[[i]]$orientation <- "h"
         traces[[i]]$hoverinfo <- "x"
       }
@@ -1018,8 +1013,8 @@ gg2list <- function(p, width = NULL, height = NULL,
   # If a trace isn't named, it shouldn't have additional hoverinfo
   traces <- lapply(compact(traces), function(x) { x$name <- x$name %||% ""; x })
   
-  gglayout$width <- width
-  gglayout$height <- height
+  gglayout$width <- width %|D|% NULL
+  gglayout$height <- height %|D|% NULL
   gglayout$barmode <- gglayout$barmode %||% "relative"
   
   l <- list(
@@ -1225,21 +1220,31 @@ uniq <- function(x) {
 make_strip_rect <- function(xdom, ydom, theme, side = "top") {
   rekt <- rect2shape(theme[["strip.background"]])
   stripTextX <- theme[["strip.text.x"]] %||% theme[["strip.text"]]
-  xTextSize <- unitConvert(stripTextX$size, "npc", "width")
+  topSize <- 
+    mm2pixels(grid::convertHeight(stripTextX$margin[1], "mm")) +
+    mm2pixels(grid::convertHeight(stripTextX$margin[3], "mm")) +
+    mm2pixels(grid::convertHeight(grid::unit(stripTextX$size, units = "points"), "mm"))
   stripTextY <- theme[["strip.text.y"]] %||% theme[["strip.text"]]
-  yTextSize <- unitConvert(stripTextY$size, "npc", "height")
+  rightSize <- 
+    mm2pixels(grid::convertWidth(stripTextX$margin[2], "mm")) +
+    mm2pixels(grid::convertWidth(stripTextX$margin[4], "mm")) +
+    mm2pixels(grid::convertWidth(grid::unit(stripTextY$size, units = "points"), "mm"))
   if ("right" %in% side) {
     # x-padding should be accounted for in `layout.margin.r`
-    rekt$x0 <- xdom[2]
-    rekt$x1 <- xdom[2] + xTextSize
     rekt$y0 <- ydom[1]
     rekt$y1 <- ydom[2]
+    rekt$x0 <- 0
+    rekt$x1 <- rightSize
+    rekt$xanchor <- xdom[2]
+    rekt$xsizemode <- "pixel"
   }
   if ("top" %in% side) {
     rekt$x0 <- xdom[1]
     rekt$x1 <- xdom[2]
-    rekt$y0 <- ydom[2]
-    rekt$y1 <- ydom[2] + yTextSize
+    rekt$y0 <- 0
+    rekt$y1 <- topSize
+    rekt$yanchor <- ydom[2]
+    rekt$ysizemode <- "pixel"
   }
   list(rekt)
 }
@@ -1267,10 +1272,6 @@ rect2shape <- function(rekt = ggplot2::element_rect()) {
     yref = "paper",
     xref = "paper"
   )
-}
-
-is_dev_ggplot2 <- function() {
-  packageVersion("ggplot2") > "2.2.1"
 }
 
 # We need access to internal ggplot2 functions in several places

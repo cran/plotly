@@ -1,16 +1,14 @@
 library(plotly)
-library(crosstalk)
 
-sd <- SharedData$new(txhousing, ~city)
+sd <- highlight_key(txhousing, ~city, "Select a city")
 
-base <- plot_ly(sd, color = I("black")) %>%
+base <- plot_ly(sd, color = I("black"), height = 400) %>%
   group_by(city)
 
 p1 <- base %>%
-  summarise(has = sum(is.na(median))) %>%
-  filter(has > 0) %>%
-  arrange(has) %>%
-  add_bars(x = ~has, y = ~factor(city, levels = city), hoverinfo = "x") %>%
+  summarise(miss = sum(is.na(median))) %>%
+  filter(miss > 0) %>%
+  add_markers(x = ~miss, y = ~forcats::fct_reorder(city, miss), hoverinfo = "x+y") %>%
   layout(
     barmode = "overlay",
     xaxis = list(title = "Number of months missing"),
@@ -22,6 +20,5 @@ p2 <- base %>%
   layout(xaxis = list(title = ""))
 
  subplot(p1, p2, titleX = TRUE, widths = c(0.3, 0.7)) %>% 
-  layout(margin = list(l = 120)) %>%
   hide_legend() %>%
-  highlight(color = "red")
+  highlight(dynamic = TRUE, selectize = TRUE)

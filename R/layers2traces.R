@@ -10,28 +10,31 @@ layers2traces <- function(data, prestats_data, layout, p) {
       position = ggtype(y, "position")
     )
     
-    # by default, show all user-specified and generated aesthetics in hovertext
-    stat_aes <- y$stat$default_aes
-    map <- c(y$mapping, stat_aes[grepl("^\\.\\.", as.character(stat_aes))])
+    # consider "calculated" aesthetics (e.g., density, count, etc)
+    calc_aes <- y$stat$default_aes[ggfun("is_calculated_aes")(y$stat$default_aes)]
+    map <- c(y$mapping, calc_aes)
+    
     # add on plot-level mappings, if they're inherited
     if (isTRUE(y$inherit.aes)) map <- c(map, p$mapping)
-    # "hidden" names should be taken verbatim
-    idx <- grepl("^\\.\\.", map) & grepl("\\.\\.$", map)
-    map <- setNames(
-      sub("^\\.\\.", "", sub("\\.\\.$", "", as.character(map))),
-      names(map)
-    )
+    
+    # turn symbol (e.g., ..count..) & call (e.g. calc(count)) mappings into text labels 
+    map <- ggfun("make_labels")(map)
+
+    # filter tooltip aesthetics down to those specified in `tooltip` arg 
     if (!identical(p$tooltip, "all")) {
       map <- map[names(map) %in% p$tooltip | map %in% p$tooltip]
     }
+    
     # throw out positional coordinates if we're hovering on fill
     if (identical("fills", hover_on(x))) {
       map <- map[!names(map) %in% c("x", "xmin", "xmax", "y", "ymin", "ymax")]
     }
+    
     # disregard geometry mapping in hovertext for GeomSf
     if ("GeomSf" %in% class(y$geom)) {
       map <- map[!names(map) %in% "geometry"]
     }
+    
     param[["hoverTextAes"]] <- map
     param
   }, data, p$layers)
@@ -79,7 +82,6 @@ layers2traces <- function(data, prestats_data, layout, p) {
   # 2. geom_smooth() is really geom_path() + geom_ribbon()
   datz <- list()
   paramz <- list()
-  layout <- if (is_dev_ggplot2()) layout else list(layout = layout)
   for (i in seq_along(data)) {
     # This has to be done in a loop, since some layers are really two layers,
     # (and we need to replicate the data/params in those cases)
@@ -108,7 +110,7 @@ layers2traces <- function(data, prestats_data, layout, p) {
     separator <- new_id()
     fac <- factor(
       apply(d[split_vars], 1, paste, collapse = separator),
-      levels = apply(lvls, 1, paste, collapse = separator)
+      levels = unique(apply(lvls, 1, paste, collapse = separator))
     )
     if (all(is.na(fac))) fac <- 1
     dl <- split(d, fac, drop = TRUE)
@@ -267,32 +269,48 @@ to_basic.GeomRect <- function(data, prestats_data, layout, params, p, ...) {
   prefix_class(dat, c("GeomPolygon", "GeomRect"))
 }
 
-#' @export 
+#' @export
 to_basic.GeomSf <- function(data, prestats_data, layout, params, p, ...) {
   
-  data <- expand(data)
+  data[["geometry"]] <- sf::st_sfc(data[["geometry"]])
+  data <- sf::st_as_sf(data, sf_column_name = "geometry")
+  geom_type <- sf::st_geometry_type(data)
+  # st_cast should "expand" a collection into multiple rows (one per feature)
+  if ("GEOMETRYCOLLECTION" %in% geom_type) {
+    data <- sf::st_cast(data)
+    geom_type <- sf::st_geometry_type(data)
+  }
+  data <- remove_class(data, "sf")
   
-  # determine the type of simple feature for each row
-  # recode the simple feature with the type of geometry used to render it
-  data[[".plotlySfType"]] <- sapply(data$geometry, function(x) class(x)[2])
-  dat <- dplyr::mutate(
-    data, .plotlySfType = dplyr::recode(.plotlySfType,
-      MULTIPOLYGON = "GeomPolygon",
-      MULTILINESTRING = "GeomLine",
-      MULTIPOINT = "GeomPoint",
-      POLYGON = "GeomPolygon",
-      LINESTRING = "GeomLine",
-      POINT = "GeomPoint"
-  ))
+  basic_type <- dplyr::recode(
+    as.character(geom_type),
+    TRIANGLE = "GeomPolygon",
+    TIN = "GeomPolygon",
+    POLYHEDRALSURFACE = "GeomPolygon",
+    SURFACE = "GeomPolygon",
+    CURVE = "GeomPath",
+    MULTISURFACE = "GeomPolygon",
+    MULTICURVE = "GeomPath",
+    CURVEPOLYGON = "GeomPolygon",
+    COMPOUNDCURVE = "GeomPath",
+    CIRCULARSTRING = "GeomPath",
+    MULTIPOLYGON = "GeomPolygon",
+    MULTILINESTRING = "GeomPath",
+    MULTIPOINT = "GeomPoint",
+    POLYGON = "GeomPolygon",
+    LINESTRING = "GeomPath",
+    POINT = "GeomPoint"
+  )
   
   # return a list of data frames...one for every geometry (a la, GeomSmooth)
-  d <- split(dat, dat[[".plotlySfType"]])
+  d <- split(data, basic_type)
   for (i in seq_along(d)) {
-    d[[i]] <- prefix_class(d[[i]], names(d)[[i]])
+    d[[i]] <- prefix_class(
+      fortify_sf(d[[i]]), c(names(d)[[i]], "GeomSf")
+    )
   }
   if (length(d) == 1) d[[1]] else d
 }
-utils::globalVariables(c(".plotlySfType"))
 
 #' @export
 to_basic.GeomMap <- function(data, prestats_data, layout, params, p, ...) {
@@ -504,7 +522,7 @@ to_basic.GeomSpoke <- function(data, prestats_data, layout, params, p, ...) {
 #' @export
 to_basic.GeomCrossbar <- function(data, prestats_data, layout, params, p, ...) {
   # from GeomCrossbar$draw_panel()
-  middle <- transform(data, x = xmin, xend = xmax, yend = y, size = size * params$fatten, alpha = NA)
+  middle <- base::transform(data, x = xmin, xend = xmax, yend = y, size = size * params$fatten, alpha = NA)
   list(
     prefix_class(to_basic.GeomRect(data), "GeomCrossbar"),
     prefix_class(to_basic.GeomSegment(middle), "GeomCrossbar")
@@ -721,7 +739,7 @@ geom2trace.GeomBar <- function(data, params, p) {
 
 #' @export
 geom2trace.GeomPolygon <- function(data, params, p) {
-  
+
   data <- group2NA(data)
   
   L <- list(
@@ -967,8 +985,17 @@ ribbon_dat <- function(dat) {
 
 aes2plotly <- function(data, params, aes = "size") {
   geom <- class(data)[1]
-  vals <- uniq(data[[aes]]) %||% params[[aes]] %||%
-    ggfun(geom)$default_aes[[aes]] %||% NA
+  
+  # Hack to support this geom_sf hack 
+  # https://github.com/tidyverse/ggplot2/blob/505e4bfb/R/sf.R#L179-L187
+  defaults <- if (inherits(data, "GeomSf")) {
+    type <- if (any(grepl("point", class(data)))) "point" else if (any(grepl("line", class(data)))) "line" else ""
+    ggfun("default_aesthetics")(type)
+  } else {
+    ggfun(geom)$default_aes
+  }
+  
+  vals <- uniq(data[[aes]]) %||% params[[aes]] %||% defaults[[aes]] %||% NA
   converter <- switch(
     aes, 
     size = mm2pixels, 

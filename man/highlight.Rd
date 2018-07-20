@@ -7,7 +7,7 @@
 highlight(p, on = "plotly_click", off, persistent = getOption("persistent",
   FALSE), dynamic = FALSE, color = NULL, selectize = FALSE,
   defaultValues = NULL, opacityDim = getOption("opacityDim", 0.2),
-  selected = attrs_selected(), ...)
+  selected = attrs_selected(), debounce = 0, ...)
 }
 \arguments{
 \item{p}{a plotly visualization.}
@@ -19,7 +19,6 @@ altogether, use \code{NULL}. Currently the following are supported:
 \item \code{'plotly_hover'}
 \item \code{'plotly_selected'}: triggered through rectangular
 (layout.dragmode = 'select') or lasso (layout.dragmode = 'lasso') brush.
-Currently only works for scatter traces with mode 'markers'.
 }}
 
 \item{off}{turn off a selection on which event(s)? To disable off
@@ -34,7 +33,10 @@ events altogether, use \code{NULL}. Currently the following are supported:
 of the plot changes.
 }}
 
-\item{persistent}{should selections persist (i.e., accumulate)?}
+\item{persistent}{should selections persist (i.e., accumulate)? We often
+refer to the default (\code{FALSE}) as a 'transient' selection mode;
+which is recommended, because one may switch from 'transient' to
+'persistent' selection by holding the shift key.}
 
 \item{dynamic}{should a widget for changing selection colors be included?}
 
@@ -54,6 +56,11 @@ opacity of non-selected traces (by multiplying with the existing opacity).}
 
 \item{selected}{attributes of the selection, see \code{\link[=attrs_selected]{attrs_selected()}}.}
 
+\item{debounce}{amount of time to wait before firing an event (in milliseconds).
+The default of 0 means do not debounce at all.
+Debouncing is mainly useful when \code{on = "plotly_hover"} to avoid firing too many events
+when users clickly move the mouse over relevant graphical marks.}
+
 \item{...}{currently not supported.}
 }
 \description{
@@ -69,18 +76,15 @@ in leaflet (see \code{demo("highlight-leaflet", package = "plotly")}).
 # These examples are designed to show you how to highlight/brush a *single*
 # view. For examples of multiple linked views, see `demo(package = "plotly")` 
 
-
 library(crosstalk)
-d <- SharedData$new(txhousing, ~city)
+d <- highlight_key(txhousing, ~city)
 p <- ggplot(d, aes(date, median, group = city)) + geom_line()
 gg <- ggplotly(p, tooltip = "city") 
-highlight(gg, persistent = TRUE, dynamic = TRUE)
+highlight(gg, dynamic = TRUE)
 
 # supply custom colors to the brush 
 cols <- toRGB(RColorBrewer::brewer.pal(3, "Dark2"), 0.5)
-highlight(
-  gg, on = "plotly_hover", color = cols, persistent = TRUE, dynamic = TRUE
-)
+highlight(gg, on = "plotly_hover", color = cols, dynamic = TRUE)
 
 # Use attrs_selected() for complete control over the selection appearance
 # note any relevant colors you specify here should override the color argument
@@ -90,10 +94,7 @@ s <- attrs_selected(
   marker = list(symbol = "x")
 )
 
-highlight(
- layout(gg, showlegend = TRUE),  
- selected = s, persistent = TRUE
-)
+highlight(layout(gg, showlegend = TRUE), selected = s)
 
 }
 \references{
