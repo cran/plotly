@@ -102,10 +102,11 @@ getLevels <- function(x) {
 tryNULL <- function(expr) tryCatch(expr, error = function(e) NULL)
 
 # Don't attempt to do "tidy" data training on these trace types
+# Note that non-tidy traces expect/anticipate data_array's of varying lengths
 is_tidy <- function(trace) {
   type <- trace[["type"]] %||% "scatter"
   !type %in% c(
-    "mesh3d", "heatmap", "histogram2d", 
+    "mesh3d", "heatmap", "histogram2d", "isosurface",
     "histogram2dcontour", "contour", "surface"
   )
 }
@@ -129,15 +130,6 @@ colorway <- function(p = NULL) {
 # column name for crosstalk key
 # TODO: make this more unique?
 crosstalk_key <- function() ".crossTalkKey"
-
-# modifyList turns elements that are data.frames into lists
-# which changes the behavior of toJSON
-as_df <- function(x) {
-  if (is.null(x) || is.matrix(x)) return(x)
-  if (is.list(x) && !is.data.frame(x)) {
-    setNames(as.data.frame(x), NULL)
-  }
-}
 
 # arrange data if the vars exist, don't throw error if they don't
 arrange_safe <- function(data, vars) {
@@ -348,7 +340,7 @@ supply_defaults <- function(p) {
     p$x$layout[[p$x$layout$mapType]] <- modify_list(
       list(domain = geoDomain), p$x$layout[[p$x$layout$mapType]]
     )
-  } else {
+  } else if (!length(p$x$layout[["grid"]])) {
     types <- vapply(p$x$data, function(tr) tr[["type"]] %||% "scatter", character(1))
     axes <- unlist(lapply(types, function(x) {
       grep("^[a-z]axis$", names(Schema$traces[[x]]$attributes), value = TRUE) %||% NULL
@@ -425,6 +417,11 @@ verify_attr_names <- function(p) {
     c(names(Schema$layout$layoutAttributes), c("barmode", "bargap", "mapType")),
     "layout"
   )
+  attrs_name_check(
+    names(p$x$config),
+    names(Schema$config),
+    "config"
+  )
   for (tr in seq_along(p$x$data)) {
     thisTrace <- p$x$data[[tr]]
     attrSpec <- Schema$traces[[thisTrace$type %||% "scatter"]]$attributes
@@ -444,7 +441,7 @@ verify_attr_names <- function(p) {
 verify_attr_spec <- function(p) {
   if (!is.null(p$x$layout)) {
     p$x$layout <- verify_attr(
-      p$x$layout, Schema$layout$layoutAttributes
+      p$x$layout, Schema$layout$layoutAttributes, layoutAttr = TRUE
     )
   }
   for (tr in seq_along(p$x$data)) {
@@ -459,7 +456,7 @@ verify_attr_spec <- function(p) {
   p
 }
 
-verify_attr <- function(proposed, schema) {
+verify_attr <- function(proposed, schema, layoutAttr = FALSE) {
   for (attr in names(proposed)) {
     attrSchema <- schema[[attr]] %||% schema[[sub("[0-9]+$", "", attr)]]
     # if schema is missing (i.e., this is an un-official attr), move along
@@ -476,8 +473,9 @@ verify_attr <- function(proposed, schema) {
       proposed[[attr]] <- retain(proposed[[attr]], uniq)
     }
     
-    # plotly.js should really handle this logic
-    if (isTRUE(grepl("fill", proposed[["hoveron"]]))) {
+    # If we deliberately only want hover on fills, send a string to 
+    # plotly.js so it does something sensible 
+    if (identical(proposed[["hoveron"]], "fills")) {
       proposed[["text"]] <- paste(uniq(proposed[["text"]]), collapse = "\n")
     }
     
@@ -487,8 +485,10 @@ verify_attr <- function(proposed, schema) {
     }
     
     # tag 'src-able' attributes (needed for api_create())
+    # note that layout has 'src-able' attributes that shouldn't
+    # be turned into grids https://github.com/ropensci/plotly/pull/1489
     isSrcAble <- !is.null(schema[[paste0(attr, "src")]]) && length(proposed[[attr]]) > 1
-    if (isDataArray || isSrcAble) {
+    if ((isDataArray || isSrcAble) && !isTRUE(layoutAttr)) {
       proposed[[attr]] <- structure(proposed[[attr]], apiSrc = TRUE)
     }
     
@@ -496,17 +496,27 @@ verify_attr <- function(proposed, schema) {
       proposed$name <- uniq(proposed$name)
     }
     
-    # if marker.sizemode='area', make sure marker.size is boxed up 
-    # (otherwise, when marker.size is a constant, it always sets the diameter!)
+    # if marker.size was populated via `size` arg (i.e., internal map_size()), 
+    # then it should _always_ be an array
+    # of appropriate length...
+    # (when marker.size is a constant, it always sets the diameter!)
     # https://codepen.io/cpsievert/pen/zazXgw
     # https://github.com/plotly/plotly.js/issues/2735
-    if ("area" %in% proposed$marker$sizemode) {
-      proposed$marker[["size"]] <- i(proposed$marker[["size"]])
+    if (is.default(proposed$marker$size)) {
+      s <- proposed$marker[["size"]]
+      if (length(s) == 1) {
+        # marker.size could be of length 1, but we may have multiple 
+        # markers -- in that case, if marker.size is an array 
+        # of length 1 will result in just one marker
+        # https://codepen.io/cpsievert/pen/aMmOza
+        n <- length(proposed[["x"]] %||% proposed[["y"]] %||% proposed[["lat"]] %||% proposed[["lon"]])
+        proposed$marker[["size"]] <- default(i(rep(s, n)))
+      }
     }
     
     # do the same for "sub-attributes"
-    if (identical(role, "object")) {
-      proposed[[attr]] <- verify_attr(proposed[[attr]], schema[[attr]])
+    if (identical(role, "object") && is.recursive(proposed[[attr]])) {
+      proposed[[attr]] <- verify_attr(proposed[[attr]], schema[[attr]], layoutAttr = layoutAttr)
     }
   }
   
@@ -515,6 +525,10 @@ verify_attr <- function(proposed, schema) {
 
 attrs_name_check <- function(proposedAttrs, validAttrs, type = "scatter") {
   illegalAttrs <- setdiff(proposedAttrs, validAttrs)
+  if ("titlefont" %in% illegalAttrs) {
+    warning("The titlefont attribute is deprecated. Use title = list(font = ...) instead.", call. = FALSE)
+    illegalAttrs <- setdiff(illegalAttrs, "titlefont")
+  }
   if (length(illegalAttrs)) {
     warning("'", type, "' objects don't have these attributes: '",
             paste(illegalAttrs, collapse = "', '"), "'\n", 
@@ -647,6 +661,51 @@ verify_mode <- function(p) {
   p
 }
 
+
+verify_colorscale <- function(p) {
+  p$x$data <- lapply(p$x$data, function(trace) {
+    trace$colorscale <- colorscale_json(trace$colorscale)
+    trace$marker$colorscale <- colorscale_json(trace$marker$colorscale)
+    trace
+  }) 
+  p
+}
+
+# Coerce `x` into a data structure that can map to a colorscale attribute.
+# Note that colorscales can either be the name of a scale (e.g., 'Rainbow') or 
+# a 2D array (e.g., [[0, 'rgb(0,0,255)'], [1, 'rgb(255,0,0)']])
+colorscale_json <- function(x) {
+  if (!length(x)) return(x)
+  if (is.character(x)) return(x)
+  if (is.matrix(x)) {
+    if (ncol(x) != 2) stop("A colorscale matrix requires two columns")
+    x <- as.data.frame(x)
+    x[, 1] <- as.numeric(x[, 1])
+  }
+  # ensure a list like this: list(list(0, 0.5, 1), list("red", "white", "blue"))
+  # converts to the correct dimensions: [[0, 'red'], [0.5, 'white'], [1, 'blue']]
+  if (is.list(x) && length(x) == 2) {
+    n1 <- length(x[[1]])
+    n2 <- length(x[[2]])
+    if (n1 != n2 || n1 == 0 || n2 == 0) {
+      warning("A colorscale list must of elements of the same (non-zero) length")
+    } else if (!is.data.frame(x) && can_be_numeric(x[[1]])) {
+      x <- data.frame(
+        val = as.numeric(x[[1]]),
+        col = as.character(x[[2]]),
+        stringsAsFactors = FALSE
+      )
+      x <- setNames(x, NULL)
+    }
+  }
+  x
+}
+
+can_be_numeric <- function(x) {
+  xnum <- suppressWarnings(as.numeric(x))
+  sum(is.na(x)) == sum(is.na(xnum))
+}
+
 # if an object (e.g. trace.marker) contains a non-default attribute, it has been user-specified
 user_specified <- function(obj = NULL) {
   if (!length(obj)) return(FALSE)
@@ -723,6 +782,13 @@ verify_key_type <- function(p) {
   for (i in seq_along(keys)) {
     k <- keys[[i]]
     if (is.null(k)) next
+    if ("select" %in% p$x$layout$clickmode && "plotly_click" %in% p$x$highlight$on) {
+      warning(
+        "`layout.clickmode` = 'select' is not designed to work well with ",
+        "the R package's linking framework (i.e. crosstalk support).",
+        call. = FALSE
+      )
+    }
     # does it *ever* make sense to have a missing key value?
     uk <- uniq(k)
     if (length(uk) == 1) {
@@ -941,7 +1007,7 @@ grab <- function(what = "username") {
 
 # try to grab an object key from a JSON file (returns empty string on error)
 try_file <- function(f, what) {
-  tryCatch(jsonlite::fromJSON(f)[[what]], error = function(e) NULL)
+  tryCatch(jsonlite::read_json(f)[[what]], error = function(e) NULL)
 }
 
 # preferred defaults for toJSON mapping
@@ -952,7 +1018,7 @@ to_JSON <- function(x, ...) {
 
 # preferred defaults for toJSON mapping
 from_JSON <- function(x, ...) {
-  jsonlite::fromJSON(x, simplifyDataFrame = FALSE, simplifyMatrix = FALSE, ...)
+  jsonlite::parse_json(x, simplifyVector = TRUE, simplifyDataFrame = FALSE, simplifyMatrix = FALSE, ...)
 }
 
 i <- function(x) {

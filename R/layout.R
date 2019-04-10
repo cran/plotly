@@ -88,8 +88,8 @@ rangeslider <- function(p, start = NULL, end = NULL, ...) {
 #' @param p a plotly object
 #' @param ... these arguments are documented at 
 #' \url{https://github.com/plotly/plotly.js/blob/master/src/plot_api/plot_config.js}
-#' @param collaborate include the collaborate mode bar button (unique to the R pkg)?
-#' @param cloud include the send data to cloud button?
+#' @param cloud deprecated. Use `showSendToCloud` instead.
+#' @param showSendToCloud include the send data to cloud button?
 #' @param locale locale to use. See [here](https://github.com/plotly/plotly.js/tree/master/dist#to-include-localization) for more info.
 #' @param mathjax add [MathJax rendering support](https://github.com/plotly/plotly.js/tree/master/dist#to-support-mathjax).
 #' If `"cdn"`, mathjax is loaded externally (meaning an internet connection is needed for 
@@ -131,7 +131,7 @@ rangeslider <- function(p, start = NULL, end = NULL, ...) {
 #' config(p, locale = "zh-CN")
 #' 
 
-config <- function(p, ..., collaborate = TRUE, cloud = FALSE, locale = NULL, mathjax = NULL) {
+config <- function(p, ..., cloud = FALSE, showSendToCloud = cloud, locale = NULL, mathjax = NULL) {
   
   if (!is.null(locale)) {
     p$dependencies <- c(
@@ -156,20 +156,11 @@ config <- function(p, ..., collaborate = TRUE, cloud = FALSE, locale = NULL, mat
     }
   }
   
-  p$x$config <- modify_list(p$x$config, list(...))
-  
-  nms <- sapply(p$x$config[["modeBarButtonsToAdd"]], "[[", "name")
-  hasCollab <- sharingButton()[["name"]] %in% nms
-  
-  if (collaborate && !hasCollab) {
-    nAdd <- length(p$x$config[["modeBarButtonsToAdd"]])
-    p$x$config[["modeBarButtonsToAdd"]][[nAdd + 1]] <- sharingButton()
-  }
-  if (!collaborate) {
-    p$x$config[["modeBarButtonsToAdd"]][nms %in% sharingButton()[["name"]]] <- NULL
-  }
-
-  p$x$config$cloud <- cloud
+  args <- list(...)
+  if ("collaborate" %in% names(args)) warning("The collaborate button is no longer supported")
+  p$x$config <- modify_list(p$x$config, args)
+  if (cloud) warning("The `cloud` argument is deprecated. Use `showSendToCloud` instead.")
+  p$x$config$showSendToCloud <- showSendToCloud
 
   p
 }

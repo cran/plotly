@@ -2,7 +2,7 @@ context("plotly")
 
 expect_traces <- function(p, n.traces, name){
   stopifnot(is.numeric(n.traces))
-  L <- save_outputs(p, paste0("plotly-", name))
+  L <- expect_doppelganger_built(p, paste0("plotly-", name))
   expect_equivalent(length(L$data), n.traces)
   L
 }
@@ -192,11 +192,12 @@ test_that("Complex example works", {
   l <- expect_traces(p, 3, "time-series-summary")
 })
 
-
 test_that("span/size controls errorbar thickness/width", {
   
   p <- plot_ly(x = 1:10, y = 1:10, error_x = list(value = 3), error_y = list(value = 2), span = I(5), size = I(10), stroke = I("black"), color = I("red")) %>%
     plotly_build()
+  
+  expect_doppelganger_built(p, "errorbar.width")
   
   d <- p$x$data
   expect_length(d, 1)
@@ -278,4 +279,34 @@ test_that("Can map data to legendgroup", {
     expect_length(bars[[i]]$legendgroup, 1)
     expect_true(bars[[i]]$legendgroup == letters[[i]])
   }
+})
+
+
+test_that("Axis domains aren't supplied if layout.grid exists", {
+  p <- plot_ly(type = 'scatter',mode = 'lines', y = c(5,1,3), xaxis = 'x', yaxis = 'y') %>%
+    add_trace(y = c(2,1,5), xaxis = 'x2', yaxis = 'y2') %>%
+    add_trace(y = c(2,1,5), xaxis = 'x3', yaxis = 'y3')%>%
+    add_trace(y = c(2,1,5), xaxis = 'x4', yaxis = 'y4')%>%
+    add_trace(y = c(2,1,5), xaxis = 'x5', yaxis = 'y5')%>%
+    add_trace(y = c(2,1,5), xaxis = 'x6', yaxis = 'y6')%>%
+    layout(grid = list(rows = 2, columns = 3, pattern ='independent'))
+  
+  l <- expect_doppelganger_built(p, "layout-grid")
+  expect_null(l$layout$xaxis$domain)
+  expect_null(l$layout$yaxis$domain)
+})
+
+
+test_that("Informative deprecation message for titlefont", {
+  expect_warning(config(plot_ly(), cloud = TRUE), "cloud")
+})
+
+test_that("Informative warning for invalid config attr", {
+  p <- config(plot_ly(), foobar = TRUE)
+  expect_warning(plotly_build(p), "foobar")
+})
+
+test_that("Informative deprecation message for titlefont", {
+  p <- layout(plot_ly(), title = "A title", titlefont = list(size = 30))
+  expect_warning(plotly_build(p), "titlefont")
 })

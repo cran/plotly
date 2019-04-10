@@ -110,6 +110,7 @@ verify_partial_bundle <- function(p) {
   # verify that this partial bundle actually supports this viz
   # (at this point, bundleType should never be 'auto' or 'main')
   missingTypes <- setdiff(types, bundleTraceMap[[bundleType]])
+  
   if (length(missingTypes)) {
     msg <- sprintf(
       "The '%s' bundle supports the following trace types: '%s'.\n\n This plotly visualization contains the following trace types: '%s'",
@@ -139,6 +140,8 @@ verify_partial_bundle <- function(p) {
     if (!file.exists(tmpfile)) {
       curl::curl_download(paste0("https://cdn.plot.ly/", bundle_script), tmpfile)
     }
+    # file src is no longer in plotly's path (it's a temp file)
+    p$dependencies[[idx]]$package <- NULL
   }
   
   p
@@ -207,6 +210,7 @@ bundleTraceMap <- list(
     "pie",
     "histogram",
     "ohlc",
-    "candlestick"
+    "candlestick",
+    "waterfall"
   )
 )

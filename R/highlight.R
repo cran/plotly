@@ -50,14 +50,13 @@
 #' @param ... currently not supported.
 #' @export
 #' @author Carson Sievert
-#' @references \url{https://cpsievert.github.io/plotly_book/linking-views-without-shiny.html}
+#' @references \url{https://plotly-r.com/client-side-linking.html}
 #' @seealso [attrs_selected()]
 #' @examples
 #' 
 #' # These examples are designed to show you how to highlight/brush a *single*
 #' # view. For examples of multiple linked views, see `demo(package = "plotly")` 
 #' 
-#' library(crosstalk)
 #' d <- highlight_key(txhousing, ~city)
 #' p <- ggplot(d, aes(date, median, group = city)) + geom_line()
 #' gg <- ggplotly(p, tooltip = "city") 
@@ -206,7 +205,10 @@ highlight_defaults <- function() {
 
 selectizeLib <- function(bootstrap = TRUE) {
   htmltools::htmlDependency(
-    "selectize", "0.12.0", depPath("selectize"),
+    name = "selectize", 
+    version = "0.12.0", 
+    package = "plotly",
+    src = dependency_dir("selectize"),
     stylesheet = if (bootstrap) "selectize.bootstrap3.css",
     script = "selectize.min.js"
   )
@@ -214,12 +216,15 @@ selectizeLib <- function(bootstrap = TRUE) {
 
 colourPickerLib <- function() {
   htmltools::htmlDependency(
-    "colourpicker", "1.1", depPath("colourpicker"),
+    name = "colourpicker", 
+    version = "1.1", 
+    package = "plotly",
+    src = dependency_dir("colourpicker"),
     stylesheet = "colourpicker.min.css",
     script = "colourpicker.min.js"
   )
 }
 
-depPath <- function(...) {
-  system.file('htmlwidgets', 'lib', ..., package = 'plotly')
+dependency_dir <- function(...) {
+  file.path('htmlwidgets', 'lib', ...)
 }

@@ -236,10 +236,18 @@ gg2list <- function(p, width = NULL, height = NULL,
     out
   }
   
+  # ggplot2 3.1.0.9000 introduced a Layer method named setup_layer() 
+  # currently, LayerSf is the only core-ggplot2 Layer that makes use
+  # of it https://github.com/tidyverse/ggplot2/pull/2875#issuecomment-438708426
+  data <- layer_data
+  if (packageVersion("ggplot2") > "3.1.0") {
+    data <- by_layer(function(l, d) if (is.function(l$setup_layer)) l$setup_layer(d, plot) else d)
+  }
+  
   # Initialise panels, add extra data for margins & missing facetting
   # variables, and add on a PANEL variable to data
   layout <- ggfun("create_layout")(plot$facet, plot$coordinates)
-  data <- layout$setup(layer_data, plot$data, plot$plot_env)
+  data <- layout$setup(data, plot$data, plot$plot_env)
   
   # save the domain of the group for display in tooltips
   groupDomains <- Map(function(x, y) {
@@ -429,9 +437,15 @@ gg2list <- function(p, width = NULL, height = NULL,
   )
   # main plot title
   if (nchar(plot$labels$title %||% "") > 0) {
-    gglayout$title <- faced(plot$labels$title, theme$plot.title$face)
-    gglayout$titlefont <- text2font(theme$plot.title)
-    gglayout$margin$t <- gglayout$margin$t + gglayout$titlefont$size
+    gglayout$title <- list(
+      text = faced(plot$labels$title, theme$plot.title$face),
+      font = text2font(theme$plot.title),
+      # don't translate vjust to y since they since have very different meaning...
+      # y is allowed to span the paper coordinate whereas vjust it local to it's grob
+      x = theme$plot.title$hjust,
+      xref = "paper"
+    )
+    gglayout$margin$t <- gglayout$margin$t + gglayout$title$font$size
   }
   # ensure there's enough space for the modebar (this is based on a height of 1em)
   # https://github.com/plotly/plotly.js/blob/dd1547/src/components/modebar/index.js#L171
@@ -687,8 +701,11 @@ gg2list <- function(p, width = NULL, height = NULL,
         gridwidth = unitConvert(panelGrid, "pixels", type),
         zeroline = FALSE,
         anchor = anchor,
-        title = faced(axisTitleText, axisTitle$face),
-        titlefont = text2font(axisTitle)
+        # layout.axisid.title don't yet support alignment :(
+        title = list(
+          text = faced(axisTitleText, axisTitle$face),
+          font = text2font(axisTitle)
+        )
       )
       
       # set scaleanchor/scaleratio if these are fixed coordinates
@@ -1300,7 +1317,7 @@ gdef2trace <- function(gdef, theme, gglayout) {
       type = "scatter",
       mode = "markers",
       opacity = 0,
-      hoverinfo = "none",
+      hoverinfo = "skip",
       showlegend = FALSE,
       # do everything on a 0-1 scale
       marker = list(

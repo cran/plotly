@@ -131,6 +131,16 @@ plotly_build.plotly <- function(p, registerFrames = TRUE) {
       class = oldClass(x)
     )
     
+    # determine trace type (if not specified, can depend on the # of data points)
+    # note that this should also determine a sensible mode, if appropriate
+    trace <- verify_type(trace)
+    # verify orientation of boxes/bars
+    trace <- verify_orientation(trace)
+    # supply sensible defaults based on trace type
+    trace <- coerce_attr_defaults(trace, p$x$layout)
+    
+    
+    
     # attach crosstalk info, if necessary
     if (crosstalk_key() %in% names(dat) && isTRUE(trace[["inherit"]] %||% TRUE)) {
       trace[["key"]] <- trace[["key"]] %||% dat[[crosstalk_key()]]
@@ -138,20 +148,10 @@ plotly_build.plotly <- function(p, registerFrames = TRUE) {
     }
     
     # if appropriate, tack on a group index
-    grps <- tryCatch(
-      as.character(dplyr::groups(dat)),
-      error = function(e) character(0)
-    )
-    
+    grps <- if (has_group(trace)) tryNULL(dplyr::group_vars(dat))
     if (length(grps) && any(lengths(trace) == NROW(dat))) {
       trace[[".plotlyGroupIndex"]] <- interaction(dat[, grps, drop = F])
     }
-    
-    # determine trace type (if not specified, can depend on the # of data points)
-    # note that this should also determine a sensible mode, if appropriate
-    trace <- verify_type(trace)
-    # verify orientation of boxes/bars
-    trace <- verify_orientation(trace)
     
     # add sensible axis names to layout
     for (i in c("x", "y", "z")) {
@@ -194,6 +194,8 @@ plotly_build.plotly <- function(p, registerFrames = TRUE) {
     tr <- trace[names(trace) %in% allAttrs]
     # TODO: does it make sense to "train" matrices/2D-tables (e.g. z)?
     tr <- tr[vapply(tr, function(x) is.null(dim(x)) && is.atomic(x), logical(1))]
+    # white-list customdata as this can be a non-atomic vector
+    tr$customdata <- trace$customdata
     builtData <- tibble::as_tibble(tr)
     # avoid clobbering I() (i.e., variables that shouldn't be scaled)
     for (i in seq_along(tr)) {
@@ -270,7 +272,7 @@ plotly_build.plotly <- function(p, registerFrames = TRUE) {
   
   # insert NAs to differentiate groups
   traces <- lapply(traces, function(x) {
-    d <- data.frame(x[names(x) %in% x$.plotlyVariableMapping], stringsAsFactors = FALSE)
+    d <- tibble::as_tibble(x[names(x) %in% x$.plotlyVariableMapping])
     d <- group2NA(
       d, if (has_group(x)) ".plotlyGroupIndex",
       ordered = if (inherits(x, "plotly_line")) "x",
@@ -352,6 +354,12 @@ plotly_build.plotly <- function(p, registerFrames = TRUE) {
   p <- verify_hovermode(p)
   # try to convert to webgl if toWebGl was used
   p <- verify_webgl(p)
+  # throw warning if webgl is being used in shinytest
+  # currently, shinytest won't rely this warning, but it should
+  # https://github.com/rstudio/shinytest/issues/146
+  if (isTRUE(getOption("shiny.testmode"))) {
+    if (is.webgl(p)) warning("shinytest can't currently render WebGL-based graphics.")
+  }
   # crosstalk dynamically adds traces, meaning that a legend could be dynamically
   # added, which is confusing. So here we populate a sensible default.
   p <- verify_showlegend(p)
@@ -364,7 +372,13 @@ plotly_build.plotly <- function(p, registerFrames = TRUE) {
     p <- registerFrames(p, frameMapping = frameMapping)
   }
   
+  # set the default plotly.js events to register in shiny
+  p <- shiny_defaults_set(p)
+  
   p <- verify_guides(p)
+  
+  # verify colorscale attributes are in a sensible data structure
+  p <- verify_colorscale(p)
   
   # verify plot attributes are legal according to the plotly.js spec
   p <- verify_attr_names(p)
@@ -775,7 +789,7 @@ map_color <- function(traces, stroke = FALSE, title = "", colorway, na.color = "
     colScale <- scales::col_numeric(pal, rng, na.color = na.color)
     # generate the colorscale to be shared across traces
     vals <- if (diff(rng) > 0) {
-      as.numeric(stats::quantile(allColor, probs = seq(0, 1, length.out = 25), na.rm = TRUE))
+      seq(rng[1], rng[2], length.out = 25)
     } else {
       c(0, 1)
     }
@@ -797,11 +811,6 @@ map_color <- function(traces, stroke = FALSE, title = "", colorway, na.color = "
         colorObj[c("cmin", "cmax")] <- NULL
         colorObj[["showscale"]] <- default(TRUE)
         traces[[i]] <- modify_list(colorObj, traces[[i]])
-        traces[[i]]$colorscale <- as_df(traces[[i]]$colorscale)
-        # sigh, contour colorscale doesn't support alpha
-        if (grepl("contour", traces[[i]][["type"]])) {
-          traces[[i]]$colorscale[, 2] <- strip_alpha(traces[[i]]$colorscale[, 2])
-        }
         traces[[i]] <- structure(traces[[i]], class = c("plotly_colorbar", "zcolor"))
         next
       }
@@ -845,8 +854,6 @@ map_color <- function(traces, stroke = FALSE, title = "", colorway, na.color = "
           traces[[i]] <- modify_list(list(fillcolor = col), traces[[i]])
         }
         
-        # make sure the colorscale is going to convert to JSON nicely
-        traces[[i]]$marker$colorscale <- as_df(traces[[i]]$marker$colorscale)
       }
     }
   
@@ -1005,4 +1012,31 @@ supplyUserPalette <- function(default, user) {
 
 # helper functions
 array_ok <- function(attr) isTRUE(tryNULL(attr$arrayOk))
-has_fill <- function(trace) isTRUE(trace$fill %in% c('tozeroy', 'tozerox', 'tonexty', 'tonextx', 'toself', 'tonext'))
+has_fill <- function(trace) {
+  trace_type <- trace[["type"]] %||% "scatter"
+  # if trace type has fillcolor, but no fill attribute, then fill is always relevant
+  has_fillcolor <- has_attr(trace_type, "fillcolor")
+  has_fill <- has_attr(trace_type, "fill")
+  if (has_fillcolor && !has_fill) return(TRUE)
+  fill <- trace[["fill"]] %||% "none"
+  if (has_fillcolor && isTRUE(fill != "none")) return(TRUE)
+  FALSE
+}
+
+# ensure we've set a sensible trace defaults
+# based on the trace type
+coerce_attr_defaults <- function(trace, layout) {
+  # if user has specified stroke, make sure the span 
+  # defaults to something greater than 0 (so they can see the stroke!)
+  if (length(trace[["stroke"]]) && !is.default(trace[["stroke"]])) {
+    trace$span <- trace[["span"]] %||% default(I(1))
+  }
+  if (trace[["type"]] %in% c("sunburst", "pie")) {
+    # As of v1.46.1, paper_bgcolor defaults to '#fff' which
+    # col2rgb() can't parse, but expands to '#ffffff'
+    # https://stackoverflow.com/a/2899224/1583084
+    bgcolor <- layout$paper_bgcolor %||% "#ffffff"
+    trace$stroke <- trace[["stroke"]] %||% default(I(bgcolor))
+  }
+  trace
+}

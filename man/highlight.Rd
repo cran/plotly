@@ -4,9 +4,10 @@
 \alias{highlight}
 \title{Query graphical elements in multiple linked views}
 \usage{
-highlight(p, on = "plotly_click", off, persistent = getOption("persistent",
-  FALSE), dynamic = FALSE, color = NULL, selectize = FALSE,
-  defaultValues = NULL, opacityDim = getOption("opacityDim", 0.2),
+highlight(p, on = "plotly_click", off,
+  persistent = getOption("persistent", FALSE), dynamic = FALSE,
+  color = NULL, selectize = FALSE, defaultValues = NULL,
+  opacityDim = getOption("opacityDim", 0.2),
   selected = attrs_selected(), debounce = 0, ...)
 }
 \arguments{
@@ -76,7 +77,6 @@ in leaflet (see \code{demo("highlight-leaflet", package = "plotly")}).
 # These examples are designed to show you how to highlight/brush a *single*
 # view. For examples of multiple linked views, see `demo(package = "plotly")` 
 
-library(crosstalk)
 d <- highlight_key(txhousing, ~city)
 p <- ggplot(d, aes(date, median, group = city)) + geom_line()
 gg <- ggplotly(p, tooltip = "city") 
@@ -98,7 +98,7 @@ highlight(layout(gg, showlegend = TRUE), selected = s)
 
 }
 \references{
-\url{https://cpsievert.github.io/plotly_book/linking-views-without-shiny.html}
+\url{https://plotly-r.com/client-side-linking.html}
 }
 \seealso{
 \code{\link[=attrs_selected]{attrs_selected()}}

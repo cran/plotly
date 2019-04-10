@@ -33,7 +33,7 @@ add_data <- function(p, data = NULL) {
 #' @param xend "final" x position (in this context, x represents "start")
 #' @param yend "final" y position (in this context, y represents "start")
 #' @seealso [plot_ly()]
-#' @references \url{http://plotly-book.cpsievert.me/the-plotly-cookbook.html}
+#' @references \url{https://plotly-r.com/overview.html}
 #' 
 #' \url{https://plot.ly/r}
 #' 
@@ -337,7 +337,8 @@ add_sf <- function(p, ..., x = ~x, y = ~y, data = NULL, inherit = TRUE) {
       data = if ("group" %in% names(d[[i]])) group_by_(d[[i]], "group", add = TRUE) else d[[i]], 
       inherit = inherit
     )
-    p <- do.call(add_trace_classed, c(args, attrs))
+    args <- modify_list(args, attrs)
+    p <- do.call(add_trace_classed, args)
   }
   
   p

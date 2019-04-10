@@ -637,6 +637,7 @@ geom2trace.GeomPath <- function(data, params, p) {
     y = data[["y"]],
     text = uniq(data[["hovertext"]]),
     key = data[["key"]],
+    customdata = data[["customdata"]],
     frame = data[["frame"]],
     ids = data[["ids"]],
     type = "scatter",
@@ -667,6 +668,7 @@ geom2trace.GeomPoint <- function(data, params, p) {
     y = data[["y"]],
     text = if (isDotPlot) data[["key"]] else uniq(data[["hovertext"]]),
     key = data[["key"]],
+    customdata = data[["customdata"]],
     frame = data[["frame"]],
     ids = data[["ids"]],
     type = "scatter",
@@ -720,6 +722,7 @@ geom2trace.GeomBar <- function(data, params, p) {
     y = y,
     text = uniq(data[["hovertext"]]),
     key = data[["key"]],
+    customdata = data[["customdata"]],
     frame = data[["frame"]],
     ids = data[["ids"]],
     type = "bar",
@@ -747,6 +750,7 @@ geom2trace.GeomPolygon <- function(data, params, p) {
     y = data[["y"]],
     text = uniq(data[["hovertext"]]),
     key = data[["key"]],
+    customdata = data[["customdata"]],
     frame = data[["frame"]],
     ids = data[["ids"]],
     type = "scatter",
@@ -778,6 +782,7 @@ geom2trace.GeomBoxplot <- function(data, params, p) {
     y = data[["y"]],
     hoverinfo = "y",
     key = data[["key"]],
+    customdata = data[["customdata"]],
     frame = data[["frame"]],
     ids = data[["ids"]],
     type = "box",
@@ -812,6 +817,7 @@ geom2trace.GeomText <- function(data, params, p) {
     text = data[["label"]],
     hovertext = data[["hovertext"]],
     key = data[["key"]],
+    customdata = data[["customdata"]],
     frame = data[["frame"]],
     ids = data[["ids"]],
     textfont = list(
@@ -850,6 +856,7 @@ geom2trace.GeomTile <- function(data, params, p) {
     z = matrix(g$fill_plotlyDomain, nrow = length(y), ncol = length(x), byrow = TRUE),
     text = matrix(g$hovertext, nrow = length(y), ncol = length(x), byrow = TRUE),
     key = data[["key"]],
+    customdata = data[["customdata"]],
     frame = data[["frame"]],
     ids = data[["ids"]],
     colorscale = setNames(colScale, NULL),
@@ -945,6 +952,7 @@ make_error <- function(data, params, xy = "x") {
     y = data[["y"]],
     text = uniq(data[["hovertext"]]),
     key = data[["key"]],
+    customdata = data[["customdata"]],
     frame = data[["frame"]],
     ids = data[["ids"]],
     type = "scatter",
@@ -992,7 +1000,12 @@ aes2plotly <- function(data, params, aes = "size") {
     type <- if (any(grepl("point", class(data)))) "point" else if (any(grepl("line", class(data)))) "line" else ""
     ggfun("default_aesthetics")(type)
   } else {
-    ggfun(geom)$default_aes
+    geom_obj <- ggfun(geom)
+    # If the first class of `data` is a data.frame,
+    # ggfun() returns a function because ggplot2 now
+    # defines data.frame in it's namespace
+    # https://github.com/ropensci/plotly/pull/1481
+    if ("default_aes" %in% names(geom_obj)) geom_obj$default_aes else NULL
   }
   
   vals <- uniq(data[[aes]]) %||% params[[aes]] %||% defaults[[aes]] %||% NA

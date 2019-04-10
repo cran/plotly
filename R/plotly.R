@@ -77,7 +77,7 @@
 #' with the source argument in [event_data()] to retrieve the 
 #' event data corresponding to a specific plot (shiny apps can have multiple plots).
 #' @author Carson Sievert
-#' @references <https://plotly-book.cpsievert.me/the-plotly-cookbook.html>
+#' @references <https://plotly-r.com/overview.html>
 #' @seealso \itemize{
 #'  \item For initializing a plotly-geo object: [plot_geo()]
 #'  \item For initializing a plotly-mapbox object: [plot_mapbox()]
@@ -387,12 +387,10 @@ plot_dendro <- function(d, set = "A", xmin = -50, height = 500, width = 500, ...
 }
 
 get_xy <- function(node) {
-  setNames(
-    tibble::as_tibble(dendextend::get_nodes_xy(node)), 
-    c("x", "y")
-  )
+  m <- dendextend::get_nodes_xy(node)
+  colnames(m) <- c("x", "y")
+  tibble::as_tibble(m)
 }
-
 
 
 #' Convert a list to a plotly htmlwidget object
@@ -434,20 +432,21 @@ as_widget <- function(x, ...) {
 
 typedArrayPolyfill <- function() {
   htmltools::htmlDependency(
-    "typedarray", "0.1",
-    src = depPath("typedarray"),
+    name = "typedarray", 
+    version = "0.1",
+    package = "plotly",
+    src = dependency_dir("typedarray"),
     script = "typedarray.min.js",
     all_files = FALSE
   )
 }
 
-# TODO: suggest a plotlyBundles package that has trace-level bundles 
-# and bundle size at print time.
 plotlyMainBundle <- function() {
   htmltools::htmlDependency(
-    "plotly-main", 
-    version = "1.39.2",
-    src = depPath("plotlyjs"),
+    name = "plotly-main", 
+    version = "1.46.1",
+    package = "plotly",
+    src = dependency_dir("plotlyjs"),
     script = "plotly-latest.min.js",
     all_files = FALSE
   )
@@ -455,9 +454,10 @@ plotlyMainBundle <- function() {
 
 plotlyHtmlwidgetsCSS <- function() {
   htmltools::htmlDependency(
-    "plotly-htmlwidgets-css", 
+    name = "plotly-htmlwidgets-css", 
     version = plotlyMainBundle()$version,
-    src = depPath("plotlyjs"),
+    package = "plotly",
+    src = dependency_dir("plotlyjs"),
     stylesheet = "plotly-htmlwidgets.css",
     all_files = FALSE
   )
@@ -468,8 +468,8 @@ locale_dependency <- function(locale) {
     stop("locale must be a character string (vector of length 1)", call. = FALSE)
   }
   
-  locale_dir <- depPath("plotlyjs", "locales")
-  locales_all <- sub("\\.js$", "", list.files(locale_dir))
+  locale_dir <- dependency_dir("plotlyjs", "locales")
+  locales_all <- sub("\\.js$", "", list.files(system.file(locale_dir, package = "plotly")))
   if (!tolower(locale) %in% locales_all) {
     stop(
       "Invalid locale: '", locale, "'.\n\n",
@@ -491,6 +491,7 @@ locale_dependency <- function(locale) {
   htmltools::htmlDependency(
     name = paste0("plotly-locale-", locale),
     version = plotlyMainBundle()$version,
+    package = "plotly",
     src = list(file = locale_dir),
     script = tolower(scripts),
     all_files = FALSE

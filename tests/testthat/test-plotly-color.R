@@ -2,7 +2,7 @@ context("plotly-color")
 
 expect_traces <- function(p, n.traces, name){
   stopifnot(is.numeric(n.traces))
-  L <- save_outputs(p, paste0("plotly-color-", name))
+  L <- expect_doppelganger_built(p, paste0("plotly-color-", name))
   expect_equivalent(length(L$data), n.traces)
   L
 }
@@ -61,6 +61,17 @@ test_that("Mapping a numeric variable to color works", {
   expect_true(min(iris$Petal.Width) == markerScale$cmin)
   expect_true(max(iris$Petal.Width) == markerScale$cmax)
   expect_true(all(0 <= markerScale$colorscale[,1] & markerScale$colorscale[,1] <= 1))
+})
+
+test_that("color/stroke mapping with box translates correctly", {
+  d <- data.frame(x = rep(c("A", "B"), each = 5), y = rnorm(10))
+  l <- plot_ly(d) %>% 
+    add_boxplot(x = ~x, y = ~y, color = ~x, colors = c('A' = "blue", 'B' = "red"), stroke = I("black")) %>%
+    expect_traces(2, "box-color-stroke")
+  expect_true(l$data[[1]]$fillcolor == toRGB("blue", 0.5))
+  expect_true(l$data[[2]]$fillcolor == toRGB("red", 0.5))
+  expect_true(l$data[[1]]$line$color == toRGB("black"))
+  expect_true(l$data[[2]]$line$color == toRGB("black"))
 })
 
 test_that("Custom RColorBrewer pallette works for numeric variable", {
