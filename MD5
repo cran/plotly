@@ -1,4 +1,4 @@
-7dc9028ce928f02c9f7ae62ca3f263d4 *DESCRIPTION
+103a904e6dcbaf0874fc5b9fca59eef6 *DESCRIPTION
 dcd388f52af8e3cb24839540e1b67823 *LICENSE
 94b700de47beb017025cda75061bcb1b *NAMESPACE
 5c69d66b87fb3adb3d36b90ce52e1782 *NEWS.md
@@ -11,7 +11,7 @@ c649b8e1083d07732415c21d5d44aab3 *R/deprecated.R
 5ee57585885947761d3b646938a92790 *R/dev.R
 5826d0bf9c7ec0ecd95386c0f26ffa3a *R/embed.R
 056b8ec48c1c58299f6dd314ad75dec2 *R/export.R
-3cef098c014a91532260f854871c52a0 *R/ggplotly.R
+fd8a67c0e15d3a0e41171edc821b76e2 *R/ggplotly.R
 4d233a12ae4a2deeecf710f6557f9734 *R/group2NA.R
 f04d488b761bba89408f26ef349e25fc *R/helpers.R
 9192f73a4c30935e9d2ce15d9b40f7a8 *R/highlight.R
@@ -40,7 +40,7 @@ c57731acef58b6165303f304a27d03a1 *R/signup.R
 b13122b9a47d30f7b387cf609a8239e8 *R/sysdata.rda
 e682b3040e575a64383a449a99bb7ed0 *R/toRGB.R
 8630832afc69ee493c688c9ffaf3202c *R/utils.R
-52e2ed7794ffc60bddb8d80278284f63 *README.md
+85337826f7e6379dbe7dea52cc9585dd *README.md
 81a69ecca67949eed8808b99d6edcfc9 *data/hobbs.rda
 f8f6a6b9bb660afdf3497622ee43fe5b *data/mic.rda
 f7c3fa056aaa871159d71d0cdba08cc1 *data/res_mn.rda

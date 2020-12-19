@@ -44,7 +44,7 @@ g <- ggplot(faithful, aes(x = eruptions, y = waiting)) +
 ggplotly(g)
 ```
 
-![<http://i.imgur.com/G1rSArP.gifv>](http://i.imgur.com/G1rSArP.gif)
+![<https://i.imgur.com/G1rSArP.gifv>](https://i.imgur.com/G1rSArP.gif)
 
 By default, `ggplotly()` tries to replicate the static ggplot2 version
 exactly (before any interaction occurs), but sometimes you need greater
@@ -60,7 +60,7 @@ gg <- ggplotly(g, dynamicTicks = "y")
 style(gg, hoveron = "points", hoverinfo = "x+y+text", hoverlabel = list(bgcolor = "white"))
 ```
 
-![<http://i.imgur.com/qRvLgea.gifv>](http://imgur.com/qRvLgea.gif)
+![<https://i.imgur.com/qRvLgea.gifv>](https://imgur.com/qRvLgea.gif)
 
 Moreover, since `ggplotly()` returns a plotly object, you can apply
 essentially any function from the R package on that object. Some useful
@@ -111,4 +111,4 @@ conduct.
 
 -----
 
-![<http://ropensci.org>](http://www.ropensci.org/public_images/github_footer.png)
+![<https://ropensci.org>](https://www.ropensci.org/public_images/github_footer.png)

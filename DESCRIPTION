@@ -1,6 +1,6 @@
 Package: plotly
 Title: Create Interactive Web Graphics via 'plotly.js'
-Version: 4.9.2.1
+Version: 4.9.2.2
 Authors@R: c(person("Carson", "Sievert", role = c("aut", "cre"),
     email = "cpsievert1@gmail.com", comment = c(ORCID = "0000-0002-4958-2844")),
     person("Chris", "Parmer", role = "aut",
@@ -35,7 +35,7 @@ LazyData: true
 RoxygenNote: 7.1.0
 Encoding: UTF-8
 NeedsCompilation: no
-Packaged: 2020-04-04 18:46:43 UTC; cpsievert
+Packaged: 2020-12-19 05:39:18 UTC; ripley
 Author: Carson Sievert [aut, cre] (<https://orcid.org/0000-0002-4958-2844>),
   Chris Parmer [aut],
   Toby Hocking [aut],
@@ -44,6 +44,10 @@ Author: Carson Sievert [aut, cre] (<https://orcid.org/0000-0002-4958-2844>),
   Marianne Corvellec [aut] (<https://orcid.org/0000-0002-1994-3581>),
   Pedro Despouy [aut],
   Plotly Technologies Inc. [cph]
-Maintainer: Carson Sievert <cpsievert1@gmail.com>
+Maintainer: ORPHANED
 Repository: CRAN
-Date/Publication: 2020-04-04 19:50:02 UTC
+Date/Publication: 2020-12-19 06:15:37 UTC
+X-CRAN-Comment: Orphaned and corrected on 2020-12-19 as check problems
+        were not corrected in time.
+ .
+ Failed to recognize Quartz-based bitmap devices.
