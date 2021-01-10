@@ -35,9 +35,9 @@ add_data <- function(p, data = NULL) {
 #' @seealso [plot_ly()]
 #' @references \url{https://plotly-r.com/overview.html}
 #' 
-#' \url{https://plot.ly/r}
+#' \url{https://plotly.com/r/}
 #' 
-#' \url{https://plot.ly/r/reference/} 
+#' \url{https://plotly.com/r/reference/} 
 #' @author Carson Sievert
 #' @export
 #' @rdname add_trace
@@ -334,7 +334,7 @@ add_sf <- function(p, ..., x = ~x, y = ~y, data = NULL, inherit = TRUE) {
       y = y,
       `_bbox` = bbox,
       set = set,
-      data = if ("group" %in% names(d[[i]])) group_by_(d[[i]], "group", add = TRUE) else d[[i]], 
+      data = if ("group" %in% names(d[[i]])) group_by_add(d[[i]], !!rlang::sym("group")) else d[[i]], 
       inherit = inherit
     )
     args <- modify_list(args, attrs)

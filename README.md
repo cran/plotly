@@ -53,7 +53,7 @@ has some convenient “high-level” arguments, such as `dynamicTicks`,
 which tells plotly.js to dynamically recompute axes, when appropriate.
 The `style()` function also comes in handy for *modifying* the
 underlying trace
-attributes (e.g. [hoveron](https://plot.ly/r/reference/#scatter-hoveron)) used to generate the plot:
+attributes (e.g. [hoveron](https://plotly.com/r/reference/#scatter-hoveron)) used to generate the plot:
 
 ``` r
 gg <- ggplotly(g, dynamicTicks = "y")
@@ -85,11 +85,11 @@ and `ids` (for ensuring sensible smooth transitions).
 
 The `plot_ly()` function provides a more direct interface to plotly.js
 so you can leverage more specialized chart types (e.g., [parallel
-coordinates](https://plot.ly/r/parallel-coordinates-plot/) or
-[maps](https://plot.ly/r/maps/)) or even some visualization that the
+coordinates](https://plotly.com/r/parallel-coordinates-plot/) or
+[maps](https://plotly.com/r/maps/)) or even some visualization that the
 ggplot2 API won’t ever support (e.g., surface,
-[mesh](https://plot.ly/r/3d-mesh/),
-[trisurf](https://plot.ly/r/trisurf/), etc).
+[mesh](https://plotly.com/r/3d-mesh/),
+[trisurf](https://plotly.com/r/trisurf/), etc).
 
 ``` r
 plot_ly(z = ~volcano, type = "surface")
@@ -99,7 +99,7 @@ plot_ly(z = ~volcano, type = "surface")
 
 ## Learn more
 
-To learn more about special features that the plotly R package provides (e.g., [client-side linking](https://plotly-r.com/client-side-linking.html), [**shiny** integration](https://plotly-r.com/linking-views-with-shiny.html), [editing and generating static images](https://plotly-r.com/publish.html), [custom events in JavaScript](https://plotly-r.com/javascript.html), and more), see <https://plotly-r.com>. You may already be familiar with existing plotly documentation (e.g., <https://plot.ly/r/>), which is essentially a language-agnostic how-to guide for learning plotly.js, whereas <https://plotly-r.com> is meant to be more wholistic tutorial written by and for the R user. The package itself ships with a number of demos (list them by running `demo(package = "plotly")`) and shiny/rmarkdown examples (list them by running `plotly_example("shiny")` or `plotly_example("rmd")`). [Carson](https://cpsievert.me) also keeps numerous [slide decks](https://talks.cpsievert.me) with useful examples and concepts.
+To learn more about special features that the plotly R package provides (e.g., [client-side linking](https://plotly-r.com/client-side-linking.html), [**shiny** integration](https://plotly-r.com/linking-views-with-shiny.html), [editing and generating static images](https://plotly-r.com/publish.html), [custom events in JavaScript](https://plotly-r.com/javascript.html), and more), see <https://plotly-r.com>. You may already be familiar with existing plotly documentation (e.g., <https://plotly.com/r/>), which is essentially a language-agnostic how-to guide for learning plotly.js, whereas <https://plotly-r.com> is meant to be more wholistic tutorial written by and for the R user. The package itself ships with a number of demos (list them by running `demo(package = "plotly")`) and shiny/rmarkdown examples (list them by running `plotly_example("shiny")` or `plotly_example("rmd")`). [Carson](https://cpsievert.me) also keeps numerous [slide decks](https://talks.cpsievert.me) with useful examples and concepts.
 
 ## Contributing
 
