@@ -1,27 +1,5 @@
 {
   "input": {
-    ".clientValue-default-plotlyCrosstalkOpts": {
-      "on": "plotly_click",
-      "persistent": false,
-      "dynamic": false,
-      "selectize": false,
-      "opacityDim": 0.2,
-      "selected": {
-        "opacity": 1
-      },
-      "debounce": 0,
-      "color": [
-
-      ]
-    },
-    "plotly_afterplot-A": "\"plot\"",
-    "plotly_brushed-A": null,
-    "plotly_brushing-A": null,
-    "plotly_click-A": null,
-    "plotly_deselect-A": "\"plot\"",
-    "plotly_hover-A": null,
-    "plotly_selected-A": null,
-    "plotly_selecting-A": null,
     "plotType": "ggplotly"
   },
   "output": {
@@ -448,9 +426,9 @@
         },
         {
           "name": "crosstalk",
-          "version": "1.1.1",
+          "version": "1.1.1.9000",
           "src": {
-            "href": "crosstalk-1.1.1"
+            "href": "crosstalk-1.1.1.9000"
           },
           "meta": null,
           "script": "js/crosstalk.min.js",
