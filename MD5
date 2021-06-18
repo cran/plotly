@@ -1,7 +1,7 @@
-b03c85322eb6f9bf5a96e5235849e8a3 *DESCRIPTION
+39ae64ea8741bd78b72504e309760e08 *DESCRIPTION
 dcd388f52af8e3cb24839540e1b67823 *LICENSE
 c36c5a1c7b590df2f183c096690408a3 *NAMESPACE
-6ed90482572b392f36ad15f18b8c518a *NEWS.md
+0dc09ba89feb0039455f732696446e3b *NEWS.md
 2a64c575fbe67288c40d800841944411 *R/add.R
 208b89c29d5fa3b238d50f1d83f31353 *R/animate.R
 aa316aa1242ced4aaafec86d95c67cbc *R/api.R
@@ -11,7 +11,7 @@ bf049db2e4b7d4fc786b1eef0fc92d22 *R/data.R
 5ee57585885947761d3b646938a92790 *R/dev.R
 5826d0bf9c7ec0ecd95386c0f26ffa3a *R/embed.R
 056b8ec48c1c58299f6dd314ad75dec2 *R/export.R
-8e84a2fb1e0e5bac9fb99f41c030dd69 *R/ggplotly.R
+b474245db437b27f716ebee44798d829 *R/ggplotly.R
 7256064e852551c3a854750f1a386975 *R/group2NA.R
 494d90e54cb131eabcc89a747d3d1c8e *R/helpers.R
 9192f73a4c30935e9d2ce15d9b40f7a8 *R/highlight.R
@@ -107,14 +107,6 @@ be31f8397bafdff521fd7f323fd9fa6d *inst/examples/shiny/crossfilter_scatter/app.R
 fe6f94f53f942b11efcad97a5399d9ab *inst/examples/shiny/drill_down/app.R
 9f1155a821a463cf49b16dee0a734df2 *inst/examples/shiny/event_data/DESCRIPTION
 2dce591961cca4fd83f9c05efd583e69 *inst/examples/shiny/event_data/app.R
-2b8d847d4c0a22fd3b56412d32e91ce6 *inst/examples/shiny/event_data/tests/shinytest/mytest-current/001.json
-75b2697fb7da869f2e4d6d32a59e9f6e *inst/examples/shiny/event_data/tests/shinytest/mytest-current/001.png
-1166d8d206b23ac8b263dc2587c72a76 *inst/examples/shiny/event_data/tests/shinytest/mytest-current/002.json
-bfbd189bab178dc2509cff29c960580e *inst/examples/shiny/event_data/tests/shinytest/mytest-current/002.png
-4ec0350b5bce11c4795234276d88c2e3 *inst/examples/shiny/event_data/tests/shinytest/mytest-current/003.json
-f976ab19eb5a3aa413030f41c819ac37 *inst/examples/shiny/event_data/tests/shinytest/mytest-current/003.png
-0b2439bd79354fa15bbee855fcea1cd3 *inst/examples/shiny/event_data/tests/shinytest/mytest-current/004.json
-1af84b9b1ecf8f7e96003954cb480f55 *inst/examples/shiny/event_data/tests/shinytest/mytest-current/004.png
 e06b6b151e7170fdb2229f70366b5dde *inst/examples/shiny/event_data/tests/shinytest/mytest-expected/001.json
 4b8443183aea5b2ba4bd2901cd618740 *inst/examples/shiny/event_data/tests/shinytest/mytest-expected/001.png
 62cd6bd5b02c9eab49ff96d52875c50a *inst/examples/shiny/event_data/tests/shinytest/mytest-expected/002.json
@@ -639,11 +631,11 @@ faf5fcc8db7059e03a3ae42615872367 *tests/figs/violin/violin.svg
 6bcb047f17363ee151df40bf1edbc5fb *tests/figs/vline/vline.svg
 5b8d6da221811179919e66b48531ac73 *tests/figs/waterfall/waterfall-simple.svg
 b25d06bc3438ab15073a828c647cc51c *tests/testthat.R
-218c6558ae4ca8917b87d2c2c90b7645 *tests/testthat/Rplots.pdf
+75930461f1641879cfd497b711649512 *tests/testthat/Rplots.pdf
 e1ca2f62691ff517a2c66d80b2d77b36 *tests/testthat/helper-skip.R
 a84895f5caf5c9a64249d2652bf44995 *tests/testthat/helper-vdiffr.R
 197bae3c32bf646b52d640f46187b686 *tests/testthat/test-animate-highlight.R
-b7b7751e1c79dc5b7f88eeb412e7c152 *tests/testthat/test-api.R
+a5f405b18014d47d9e45881c347f6ebd *tests/testthat/test-api.R
 430900c86f6494e62b9f53ab377767ac *tests/testthat/test-cookbook-axes.R
 3dbada07aa781e2d9dc3b21b99ae2453 *tests/testthat/test-cookbook-lines.R
 607475f5a929d46df9fa531303e5eb1e *tests/testthat/test-cookbook-scatterplots.R
@@ -653,7 +645,7 @@ b7b7751e1c79dc5b7f88eeb412e7c152 *tests/testthat/test-api.R
 7a8ffbd8e96ce3341206fc9c15ae43c2 *tests/testthat/test-ggplot-abline.R
 0717ffa4ff752ef243e881f0c70890dd *tests/testthat/test-ggplot-annotation_.R
 b7fdf21c3d573acb5f0418aa6d4a4596 *tests/testthat/test-ggplot-area.R
-ffbef32db14a62d70c932ca7a55e9c45 *tests/testthat/test-ggplot-bar.R
+a87247a0112afe0e20499eb15660fd53 *tests/testthat/test-ggplot-bar.R
 d5d80d9b60f5512269762d39af9ac2c4 *tests/testthat/test-ggplot-blank.R
 d62dfa994d653549f9b45048fac9938a *tests/testthat/test-ggplot-boxplot.R
 eccd342e3a74d6509b8afc274c8b1570 *tests/testthat/test-ggplot-col.R
@@ -681,7 +673,7 @@ fa0adfeb9eeb6da89d1dcf3e22d48c66 *tests/testthat/test-ggplot-legend.R
 93248568949c46592f4a742982dd0f30 *tests/testthat/test-ggplot-path.R
 8c55b901d51e6e290cbd505c39b4d141 *tests/testthat/test-ggplot-point.R
 68a713aedb4d1210af1e943abbeaf7f6 *tests/testthat/test-ggplot-polygons.R
-993784c10c3e0c93cb9eb8dce14189b2 *tests/testthat/test-ggplot-quantile.R
+a3a4c3ec067fce578de04437322d5682 *tests/testthat/test-ggplot-quantile.R
 06963106fe1728026ff039f57ec28fdd *tests/testthat/test-ggplot-rect.R
 c8dbf2bff576b474d3b69cccfc2427b0 *tests/testthat/test-ggplot-resize.R
 66c387534ae1d7117a5d90a8fe67634a *tests/testthat/test-ggplot-ribbon.R
@@ -705,9 +697,9 @@ cc9000e854ce6fab3e132c8a38794499 *tests/testthat/test-group2NA.R
 b9dc203f268c26175846160ff41352b1 *tests/testthat/test-plotly-colorbar.R
 540bb866984fd8389f6fae639c99f431 *tests/testthat/test-plotly-colorscale.R
 e371f402e66f997b7e13697856517fc2 *tests/testthat/test-plotly-customdata.R
-a104b9921e01342e4a68c919f541570e *tests/testthat/test-plotly-data.R
-a9879e1f38ab37bbf513c4010b12ffe8 *tests/testthat/test-plotly-filename.R
-4f6116ae2a8f67b9e69d7b3deb224a19 *tests/testthat/test-plotly-getfigure.R
+773dbd2897f84ac4a298304903b3d4d6 *tests/testthat/test-plotly-data.R
+aa971819809916135cb14a5689c908c2 *tests/testthat/test-plotly-filename.R
+0b949da08ce5eb7d82161fd1ab7b63b8 *tests/testthat/test-plotly-getfigure.R
 38ba585b3912732d2ca61c13ae552725 *tests/testthat/test-plotly-group.R
 abb7b85e48b792a3e3d6634e5d5346b0 *tests/testthat/test-plotly-image-trace.R
 7ad23dc819b8ddf2c9e45faa9e0cf7a7 *tests/testthat/test-plotly-internals.R
@@ -717,7 +709,7 @@ f956bbb0fb9bd02123e6281b35ce153f *tests/testthat/test-plotly-linetype.R
 a75e9c3214a8bd0435de1366a1e30c2a *tests/testthat/test-plotly-partial-bundles.R
 367bf8351a2c64bd2febf54744a1494d *tests/testthat/test-plotly-pie.R
 14b4631f5d889188f2981049c5b70880 *tests/testthat/test-plotly-sf.R
-b18ecb6011268967cf92733ce4874956 *tests/testthat/test-plotly-shiny.R
+1292468df79f2b4f18ba81f63d1b343a *tests/testthat/test-plotly-shiny.R
 9b2fcd846a30050078b7a64649daa156 *tests/testthat/test-plotly-size.R
 37818c209c0cfd15dfaabe370692dfe3 *tests/testthat/test-plotly-splom.R
 71fa0ef2b8b4e5c5ce57bf5fb0636739 *tests/testthat/test-plotly-subplot.R
