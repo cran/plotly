@@ -1,6 +1,6 @@
 Package: plotly
 Title: Create Interactive Web Graphics via 'plotly.js'
-Version: 4.9.4.1
+Version: 4.10.0
 Authors@R: c(person("Carson", "Sievert", role = c("aut", "cre"),
     email = "cpsievert1@gmail.com", comment = c(ORCID = "0000-0002-4958-2844")),
     person("Chris", "Parmer", role = "aut",
@@ -20,9 +20,9 @@ Authors@R: c(person("Carson", "Sievert", role = c("aut", "cre"),
     person("Plotly Technologies Inc.", role = "cph"))
 License: MIT + file LICENSE
 Description: Create interactive web graphics from 'ggplot2' graphs and/or a custom interface to the (MIT-licensed) JavaScript library 'plotly.js' inspired by the grammar of graphics.
-URL: https://plotly-r.com, https://github.com/ropensci/plotly#readme,
+URL: https://plotly-r.com, https://github.com/plotly/plotly.R,
         https://plotly.com/r/
-BugReports: https://github.com/ropensci/plotly/issues
+BugReports: https://github.com/plotly/plotly.R/issues
 Depends: R (>= 3.2.0), ggplot2 (>= 3.0.0)
 Imports: tools, scales, httr (>= 1.3.0), jsonlite (>= 1.6), magrittr,
         digest, viridisLite, base64enc, htmltools (>= 0.3.6),
@@ -31,14 +31,14 @@ Imports: tools, scales, httr (>= 1.3.0), jsonlite (>= 1.6), magrittr,
         crosstalk, purrr, data.table, promises
 Suggests: MASS, maps, hexbin, ggthemes, GGally, testthat, knitr,
         devtools, shiny (>= 1.1.0), shinytest (>= 1.3.0), curl,
-        rmarkdown, vdiffr, Cairo, broom, webshot, listviewer,
-        dendextend, sf, maptools, rgeos, png, IRdisplay, processx,
-        plotlyGeoAssets, forcats, palmerpenguins
+        rmarkdown, Cairo, broom, webshot, listviewer, dendextend,
+        maptools, rgeos, sf, png, IRdisplay, processx, plotlyGeoAssets,
+        forcats, palmerpenguins, rversions, reticulate
 LazyData: true
-RoxygenNote: 7.1.1
+RoxygenNote: 7.1.2
 Encoding: UTF-8
 NeedsCompilation: no
-Packaged: 2021-06-17 18:05:55 UTC; cpsievert
+Packaged: 2021-10-08 19:08:31 UTC; cpsievert
 Author: Carson Sievert [aut, cre] (<https://orcid.org/0000-0002-4958-2844>),
   Chris Parmer [aut],
   Toby Hocking [aut],
@@ -50,4 +50,4 @@ Author: Carson Sievert [aut, cre] (<https://orcid.org/0000-0002-4958-2844>),
   Plotly Technologies Inc. [cph]
 Maintainer: Carson Sievert <cpsievert1@gmail.com>
 Repository: CRAN
-Date/Publication: 2021-06-18 09:00:02 UTC
+Date/Publication: 2021-10-09 21:10:07 UTC
