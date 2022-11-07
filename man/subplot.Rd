@@ -60,6 +60,7 @@ A plotly object
 View multiple plots in a single view
 }
 \examples{
+\dontshow{if (interactive() || !identical(.Platform$OS.type, "windows")) (if (getRversion() >= "3.4") withAutoprint else force)(\{ # examplesIf}
 
 # pass any number of plotly objects to subplot()
 p1 <- plot_ly(economics, x = ~date, y = ~uempmed)
@@ -88,8 +89,8 @@ economics_long \%>\%
   do(p = plot_ly(., x = ~date, y = ~value)) \%>\%
   subplot(nrows = NROW(.), shareX = TRUE)
   
-# learn more at https://plotly.com/r/subplot.html
-
+# learn more at https://plotly.com/r/subplots/
+\dontshow{\}) # examplesIf}
 }
 \author{
 Carson Sievert

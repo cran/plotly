@@ -17,14 +17,15 @@
 #' @param env The environment in which to evaluate `expr`.
 #' @param quoted Is `expr` a quoted expression (with `quote()`)? This 
 #'   is useful if you want to save an expression in a variable.
-#'   
+#' @param fill see [htmlwidgets::shinyWidgetOutput()] for explanation (requires
+#'   a recent version of htmlwidgets).
 #' @importFrom htmlwidgets shinyWidgetOutput
 #' @importFrom htmlwidgets shinyRenderWidget
 #' @name plotly-shiny
 #'
 #' @export
 plotlyOutput <- function(outputId, width = "100%", height = "400px", 
-                         inline = FALSE, reportTheme = TRUE) {
+                         inline = FALSE, reportTheme = TRUE, fill = !inline) {
   args <- list(
     outputId = outputId, 
     name = "plotly", 
@@ -34,8 +35,11 @@ plotlyOutput <- function(outputId, width = "100%", height = "400px",
     package = "plotly",
     reportSize = TRUE
   )
-  if (is_available("shiny", "1.4.0.9003") && is_available("htmlwidgets", "1.5.2.9000")) {
+  if (is_installed("shiny", "1.4.0.9003") && is_installed("htmlwidgets", "1.5.2.9000")) {
     args$reportTheme <- reportTheme
+  }
+  if (is_installed("htmlwidgets", "1.5.4.9001")) {
+    args$fill <- fill
   }
   do.call(htmlwidgets::shinyWidgetOutput, args)
 }

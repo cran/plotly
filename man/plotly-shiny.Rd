@@ -11,7 +11,8 @@ plotlyOutput(
   width = "100\%",
   height = "400px",
   inline = FALSE,
-  reportTheme = TRUE
+  reportTheme = TRUE,
+  fill = !inline
 )
 
 renderPlotly(expr, env = parent.frame(), quoted = FALSE)
@@ -30,6 +31,9 @@ height is computed with HTML/CSS.}
 
 \item{reportTheme}{whether or not to report CSS styles (if a sufficient
 version of shiny and htmlwidgets is available).}
+
+\item{fill}{see \code{\link[htmlwidgets:htmlwidgets-shiny]{htmlwidgets::shinyWidgetOutput()}} for explanation (requires
+a recent version of htmlwidgets).}
 
 \item{expr}{An expression that generates a plotly}
 

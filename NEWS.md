@@ -1,3 +1,32 @@
+# 4.10.1
+
+## Changes to plotly.js
+
+* This version of the R package upgrades the version of the underlying plotly.js library from v2.5.1 to v2.11.1. This includes many bug fixes and improvements. The [plotly.js release page](https://github.com/plotly/plotly.js/releases) has the full list of changes.
+
+## New features
+
+* `plotlyOutput()` gains a new `fill` parameter. When `TRUE` (the default), the widget's container element is allowed to grow/shrink to fit it's parent container so long as that parent is opinionated about its height and has been marked with `htmltools::bindFillRole(x, container = TRUE)`. (#2198)
+  * The primary motivation for this is to allow plots to grow/shrink by default [inside `bslib::card_body_fill()`](https://rstudio.github.io/bslib/articles/cards.html#responsive-sizing)
+* `ggplotly()` now supports the `{ggalluvial}` package. (#2061, thanks @moutikabdessabour)
+* `highlight()` now supports `on="plotly_selecting"`, enabling client-side linked brushing via mouse click+drag (no mouse-up event required, as with `on="plotly_selected"`). (#1280)
+* `raster2uri()` supports nativeRaster objects. This enables nativeRaster support for
+  the `annotation_raster()` geom (#2174, @zeehio).
+
+## Bug fixes
+
+* `ggplotly()` now converts `stat_ecdf()` properly. (#2065)
+* `ggplotly()` now correctly handles `geom_tile()` with no `fill` aesthetic. (#2063)
+* `ggplotly()` now respects `guide(aes = "none")` (e.g., `guide(fill = "none")`) when constructing legend entries. (#2067)
+* Fixed an issue with translating `GGally::ggcorr()` via `ggplotly()`. (#2012)
+* Fixed an issue where clearing a crosstalk filter would raise an error in the JS console (#2087)
+* Fixed an issue where `map_color()` would throw an error on R 4.2 (#2131)
+
+## Improvements
+
+* `ggplotly()` does not issue warnings with `options(warnPartialMatchArgs = TRUE)` any longer. (#2046, thanks @bersbersbers)
+* `ggplotly()` does not issue warnings related to use of deprecated `tidyr::gather_()` in internals. (#2125, thanks @simonpcouch)
+
 # 4.10.0
 
 ## Breaking changes in JavaScript API

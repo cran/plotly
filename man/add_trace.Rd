@@ -165,6 +165,7 @@ If \code{z} is a raster object (see \code{\link[=as.raster]{as.raster()}}), the 
 Add trace(s) to a plotly visualization
 }
 \examples{
+\dontshow{if (interactive() || !identical(.Platform$OS.type, "windows")) (if (getRversion() >= "3.4") withAutoprint else force)(\{ # examplesIf}
 
 # the `plot_ly()` function initiates an object, and if no trace type
 # is specified, it sets a sensible default
@@ -253,9 +254,14 @@ plot_ly(ds, labels = ~labels, values = ~values) \%>\%
   layout(title = "Basic Pie Chart using Plotly")
   
 data(wind)
-plot_ly(wind, r = ~r, t = ~t) \%>\% 
+plot_ly(wind, r = ~r, theta = ~t) \%>\% 
   add_area(color = ~nms) \%>\%
-  layout(radialaxis = list(ticksuffix = "\%"), orientation = 270)
+  layout(
+    polar = list(
+      radialaxis = list(ticksuffix = "\%"), 
+      angularaxis = list(rotation = 90)
+    )
+  )
 
 # ------------------------------------------------------------
 # 3D chart types
@@ -265,7 +271,7 @@ plot_ly(z = ~volcano) \%>\%
 plot_ly(x = c(0, 0, 1), y = c(0, 1, 0), z = c(0, 0, 0)) \%>\% 
   add_mesh()
 }
-
+\dontshow{\}) # examplesIf}
 }
 \references{
 \url{https://plotly-r.com/overview.html}

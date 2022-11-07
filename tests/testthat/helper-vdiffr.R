@@ -4,6 +4,8 @@ message("Visual testing is ", if (!visual_testing) "not ", "enabled.")
 
 # start up the orca image server
 imageServer <- if (visual_testing) {
+  # https://github.com/plotly/plotly.R/issues/2179
+  reticulate::py_run_string("import sys") 
   kaleido() 
 } else {
   list(transform = function(...) stop("Visual testing is disabled!"))
@@ -11,22 +13,28 @@ imageServer <- if (visual_testing) {
 
 
 expect_doppelganger <- function(p, name, ...) {
+  testthat::local_edition(3)
+  
+  name <- str_standardise(name)
+  file <- paste0(name, ".svg")
+  path <- tempfile(file, fileext = ".svg")
+  testthat::announce_snapshot_file(path, name = file)
   
   if (!visual_testing) {
     return(invisible(NULL))
   }
   
-  testthat::local_edition(3)
-  
   # some plots have random characteristics, so make sure we always have the same seed,
   # otherwise comparing svg produces false positives
   set.seed(555)
   
-  name <- str_standardise(name)
-  file <- paste0(name, ".svg")
-  path <- tempfile(file, fileext = ".svg")
   write_plotly_svg(p, path)
-  testthat::expect_snapshot_file(path = path, name = file, cran = FALSE)
+  testthat::expect_snapshot_file(
+    path = path, name = file, cran = FALSE,
+    compare = function(old, new) {
+      compare_file_text(old, new) || identical(rsvg::rsvg_png(old), rsvg::rsvg_png(new))
+    }
+  )
 }
 
 # run visual test and return 'built' data/layout

@@ -23,8 +23,11 @@ layers2traces <- function(data, prestats_data, layout, p) {
     # turn symbol (e.g., ..count..) & call (e.g. calc(count)) mappings into text labels 
     map <- ggfun("make_labels")(map)
 
+
     # filter tooltip aesthetics down to those specified in `tooltip` arg 
     if (!identical(p$tooltip, "all")) {
+      # rectify tooltips, ggplot automatically convert `color` => `colour`
+      p$tooltip[p$tooltip == "color"] <- "colour"
       map <- map[names(map) %in% p$tooltip | map %in% p$tooltip]
     }
     
@@ -99,12 +102,16 @@ layers2traces <- function(data, prestats_data, layout, p) {
   }
   # now to the actual layer -> trace conversion
   trace.list <- list()
+  aes_no_guide <- names(vapply(p$guides, identical, logical(1), "none"))
   for (i in seq_along(datz)) {
     d <- datz[[i]]
     # variables that produce multiple traces and deserve their own legend entries
-    split_legend <- paste0(names(discreteScales), "_plotlyDomain")
+    split_legend <- paste0(
+      setdiff(names(discreteScales), aes_no_guide), 
+      "_plotlyDomain"
+    )
     # add variable that produce multiple traces, but do _not_ deserve entries
-    split_by <- c(split_legend, "PANEL", "frame", split_on(d))
+    split_by <- c(split_legend, aes_no_guide, "PANEL", "frame", split_on(d))
     # ensure the factor level orders (which determines traces order)
     # matches the order of the domain values
     split_vars <- intersect(split_by, names(d))
@@ -168,6 +175,12 @@ layers2traces <- function(data, prestats_data, layout, p) {
 #' @export
 to_basic <- function(data, prestats_data, layout, params, p, ...) {
   UseMethod("to_basic")
+}
+
+#' @export 
+to_basic.GeomFunction <- function (data, prestats_data, layout, params, p, ...) {
+   data$y <- params$fun(data$x)
+   prefix_class(data, "GeomPath")
 }
 
 #' @export
@@ -243,6 +256,7 @@ to_basic.GeomLine <- function(data, prestats_data, layout, params, p, ...) {
 
 #' @export
 to_basic.GeomStep <- function(data, prestats_data, layout, params, p, ...) {
+  data <- data[order(data[["x"]]), ]
   prefix_class(data, "GeomPath")
 }
 
@@ -358,7 +372,7 @@ to_basic.GeomRasterAnn <- function(data, prestats_data, layout, params, p, ...) 
 #' @export
 to_basic.GeomTile <- function(data, prestats_data, layout, params, p, ...) {
   # geom2trace.GeomTile is a heatmap, which requires continuous fill
-  if (is.discrete(prestats_data$fill)) {
+  if (is.discrete(data$fill_plotlyDomain %||% NA_character_)) {
     data <- prefix_class(data, "GeomRect")
     to_basic(data, prestats_data, layout, params, p)
   } else {
@@ -373,9 +387,11 @@ to_basic.GeomHex <- function(data, prestats_data, layout, params, p, ...) {
   dy <- resolution(data[["y"]], FALSE)/sqrt(3)/2 * 1.15
   hexC <- hexbin::hexcoords(dx, dy, n = 1)
   n <- nrow(data)
-  data$size <- ifelse(data$size < 1, data$size ^ (1 / 6), data$size ^ 6)
-  x <- rep.int(hexC[["x"]], n) * rep(data$size, each = 6) + rep(data[["x"]], each = 6)
-  y <- rep.int(hexC[["y"]], n) * rep(data$size, each = 6) + rep(data[["y"]], each = 6)
+  nm <- linewidth_or_size(GeomHex)
+  size <- data[[nm]]
+  data[[nm]] <- ifelse(size < 1, size ^ (1 / 6), size ^ 6)
+  x <- rep.int(hexC[["x"]], n) * rep(data[[nm]], each = 6) + rep(data[["x"]], each = 6)
+  y <- rep.int(hexC[["y"]], n) * rep(data[[nm]], each = 6) + rep(data[["y"]], each = 6)
   data <- data[rep(seq_len(n), each = 6), ]
   data[["x"]] <- x
   data[["y"]] <- y
@@ -407,7 +423,10 @@ to_basic.GeomAbline <- function(data, prestats_data, layout, params, p, ...) {
   data$group <- interaction(
     data[!grepl("group", names(data)) & !vapply(data, anyNA, logical(1))]
   )
-  lay <- tidyr::gather_(layout$layout, "variable", "x", c("x_min", "x_max"))
+  lay <- tidyr::pivot_longer(
+    data = layout$layout, cols = c("x_min", "x_max"), values_to = "x", names_to = "variable"
+  ) 
+  lay <- as.data.frame(lay)
   data <- merge(lay[c("PANEL", "x")], data, by = "PANEL")
   data[["y"]] <- with(data, intercept + slope * x)
   prefix_class(data, c("GeomHline", "GeomPath"))
@@ -420,7 +439,10 @@ to_basic.GeomHline <- function(data, prestats_data, layout, params, p, ...) {
     data[!grepl("group", names(data)) & !vapply(data, anyNA, logical(1))]
   )
   x <- if (inherits(p$coordinates, "CoordFlip")) "y" else "x"
-  lay <- tidyr::gather_(layout$layout, "variable", x, paste0(x, c("_min", "_max")))
+  lay <- tidyr::pivot_longer(
+    data = layout$layout, cols = paste0(x, c("_min", "_max")), values_to = x, names_to = "variable"
+  ) 
+  lay <- as.data.frame(lay)
   data <- merge(lay[c("PANEL", x)], data, by = "PANEL")
   data[["x"]] <- data[[x]]
   data[["y"]] <- data$yintercept
@@ -434,7 +456,10 @@ to_basic.GeomVline <- function(data, prestats_data, layout, params, p, ...) {
     data[!grepl("group", names(data)) & !vapply(data, anyNA, logical(1))]
   )
   y <- if (inherits(p$coordinates, "CoordFlip")) "x" else "y"
-  lay <- tidyr::gather_(layout$layout, "variable", y, paste0(y, c("_min", "_max")))
+  lay <- tidyr::pivot_longer(
+    data = layout$layout, cols = paste0(y, c("_min", "_max")), values_to = y, names_to = "variable"
+  ) 
+  lay <- as.data.frame(lay)
   data <- merge(lay[c("PANEL", y)], data, by = "PANEL")
   data[["y"]] <- data[[y]]
   data[["x"]] <- data$xintercept
@@ -481,7 +506,10 @@ to_basic.GeomLinerange <- function(data, prestats_data, layout, params, p, ...) 
   
   # reshape data so that x/y reflect path data
   data$group <- seq_len(nrow(data))
-  data <- tidyr::gather_(data, "recodeVariable", "y", c("ymin", "ymax"))
+  data <- tidyr::pivot_longer(
+    data = data, cols = c("ymin", "ymax"), values_to = "y", names_to = "recodeVariable"
+  )
+  data <- as.data.frame(data)
   data <- data[order(data$group), ]
   # fix the hovertext (by removing the "irrelevant" aesthetic)
   recodeMap <- p$mapping[dplyr::recode(data[["recodeVariable"]], "ymax" = "ymin", "ymin" = "ymax")]
@@ -532,13 +560,15 @@ to_basic.GeomSpoke <- function(data, prestats_data, layout, params, p, ...) {
 #' @export
 to_basic.GeomCrossbar <- function(data, prestats_data, layout, params, p, ...) {
   # from GeomCrossbar$draw_panel()
-  middle <- base::transform(data, x = xmin, xend = xmax, yend = y, size = size * params$fatten, alpha = NA)
+  middle <- base::transform(data, x = xmin, xend = xmax, yend = y, alpha = NA)
+  nm <- linewidth_or_size(GeomCrossbar)
+  data[[nm]] <- data[[nm]] * params$fatten
   list(
     prefix_class(to_basic.GeomRect(data), "GeomCrossbar"),
     prefix_class(to_basic.GeomSegment(middle), "GeomCrossbar")
   )
 }
-utils::globalVariables(c("xmin", "xmax", "y", "size", "COL", "PANEL", "ROW", "yaxis"))
+utils::globalVariables(c("xmin", "xmax", "y", "size", "linewidth", "COL", "PANEL", "ROW", "yaxis"))
 
 #' @export
 to_basic.GeomRug  <- function(data, prestats_data, layout, params, p, ...) {
@@ -613,6 +643,35 @@ to_basic.GeomQuantile <- function(data, prestats_data, layout, params, p, ...){
   dat
 }
 
+# ggalluvial::GeomStratum
+#' @export
+to_basic.GeomStratum <- function(data, ...) {
+  to_basic.GeomRect(data, ...)
+}
+
+# ggalluvial::GeomAlluvium
+#' @export 
+to_basic.GeomAlluvium <- function(data, ...) {
+  # geom_alluvium by default generates a data.frame with a colour column and sets it to 0, which leads to an error when trying to get the colour from the number and grid::col2rgb complains that colors must be positive integers.
+  cols <- unique(data$colour)
+  if (length(cols) == 1 && cols[1] == 0) {
+    data$colour <- NULL
+  }
+  
+  data <- data[order(data$x), ]
+  row_number <- nrow(data)
+  data_rev <- data[rev(seq_len(row_number)), ]
+  unused_aes <- setdiff(names(data), c("x", "y", "ymin", "ymax"))
+  
+  d <- structure(rbind(
+    cbind(x = data$x, y = data$ymin, data[unused_aes]),
+    cbind(x = data$x[row_number], y = data$ymin[row_number], data[row_number, unused_aes]),
+    cbind(x = data_rev$x, y = data_rev$ymax, data_rev[unused_aes])
+  ), class = class(data))
+  
+  prefix_class(d, "GeomPolygon") 
+}
+
 #' @export
 to_basic.default <- function(data, prestats_data, layout, params, p, ...) {
   data
@@ -655,7 +714,7 @@ geom2trace.GeomPath <- function(data, params, p) {
     name = if (inherits(data, "GeomSmooth")) "fitted values",
     line = list(
       # TODO: line width array? -- https://github.com/plotly/plotly.js/issues/147
-      width = aes2plotly(data, params, "size")[1],
+      width = aes2plotly(data, params, linewidth_or_size(GeomPath))[1],
       color = toRGB(
         aes2plotly(data, params, "colour"),
         aes2plotly(data, params, "alpha")
@@ -748,7 +807,7 @@ geom2trace.GeomBar <- function(data, params, p) {
         aes2plotly(data, params, "alpha")
       ),
       line = list(
-        width = aes2plotly(data, params, "size"),
+        width = aes2plotly(data, params, linewidth_or_size(GeomBar)),
         color = aes2plotly(data, params, "colour")
       )
     )
@@ -757,7 +816,7 @@ geom2trace.GeomBar <- function(data, params, p) {
 
 #' @export
 geom2trace.GeomPolygon <- function(data, params, p) {
-
+  
   data <- group2NA(data)
   
   L <- list(
@@ -771,7 +830,7 @@ geom2trace.GeomPolygon <- function(data, params, p) {
     type = "scatter",
     mode = "lines",
     line = list(
-      width = aes2plotly(data, params, "size"),
+      width = aes2plotly(data, params, linewidth_or_size(GeomPolygon)),
       color = toRGB(
         aes2plotly(data, params, "colour"),
         aes2plotly(data, params, "alpha")
@@ -818,7 +877,7 @@ geom2trace.GeomBoxplot <- function(data, params, p) {
     ),
     line = list(
       color = aes2plotly(data, params, "colour"),
-      width = aes2plotly(data, params, "size")
+      width = aes2plotly(data, params, linewidth_or_size(GeomBoxplot))
     )
   ))
 }
@@ -921,11 +980,11 @@ geom2trace.default <- function(data, params, p) {
 # since plotly.js can't draw two polygons with different fill in a single trace
 split_on <- function(dat) {
   lookup <- list(
-    GeomHline = c("linetype", "colour", "size"),
-    GeomVline = c("linetype", "colour", "size"),
-    GeomAbline = c("linetype", "colour", "size"),
-    GeomPath = c("fill", "colour", "size"),
-    GeomPolygon = c("fill", "colour", "size"),
+    GeomHline = c("linetype", "colour", "size", "linewidth"),
+    GeomVline = c("linetype", "colour", "size", "linewidth"),
+    GeomAbline = c("linetype", "colour", "size", "linewidth"),
+    GeomPath = c("fill", "colour", "size", "linewidth"),
+    GeomPolygon = c("fill", "colour", "size", "linewidth"),
     GeomBar = "fill",
     GeomBoxplot = c("colour", "fill", "size"),
     GeomErrorbar = "colour",
@@ -1024,7 +1083,7 @@ aes2plotly <- function(data, params, aes = "size") {
   # Hack to support this geom_sf hack 
   # https://github.com/tidyverse/ggplot2/blob/505e4bfb/R/sf.R#L179-L187
   defaults <- if (inherits(data, "GeomSf")) {
-    type <- if (any(grepl("point", class(data)))) "point" else if (any(grepl("line", class(data)))) "line" else ""
+    type <- if (any(grepl("[P-p]oint", class(data)))) "point" else if (any(grepl("[L-l]ine", class(data)))) "line" else ""
     ggfun("default_aesthetics")(type)
   } else {
     geom_obj <- ggfun(geom)
@@ -1038,7 +1097,8 @@ aes2plotly <- function(data, params, aes = "size") {
   vals <- uniq(data[[aes]]) %||% params[[aes]] %||% defaults[[aes]] %||% NA
   converter <- switch(
     aes, 
-    size = mm2pixels, 
+    size = mm2pixels,
+    linewidth = mm2pixels,
     stroke = mm2pixels, 
     colour = toRGB, 
     fill = toRGB, 
@@ -1056,6 +1116,31 @@ aes2plotly <- function(data, params, aes = "size") {
   }
   converter(vals)
 }
+
+
+# ggplot2 3.4.0 deprecated size in favor of linewidth in line-based geoms (e.g.,
+# GeomLine, GeomRect, etc) and elements (e.g., element_line(), element_rect(),
+# etc). Note that, some geoms (e.g., GeomBoxplot, GeomSf) can have both 
+# linewidth and size
+linewidth_or_size <- function(x) {
+  UseMethod("linewidth_or_size")
+}
+
+#' @export
+linewidth_or_size.Geom <- function(x) {
+  if ("linewidth" %in% x$aesthetics()) "linewidth" else "size"
+}
+
+#' @export
+linewidth_or_size.element <- function(x) {
+  if ("linewidth" %in% names(x)) "linewidth" else "size"
+}
+
+#' @export
+linewidth_or_size.default <- function(x) {
+  if (get_package_version("ggplot2") >= "3.4") "linewidth" else "size"
+}
+
 
 # Convert R pch point codes to plotly "symbol" codes.
 pch2symbol <- function(x) {
