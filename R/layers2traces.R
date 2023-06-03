@@ -102,7 +102,12 @@ layers2traces <- function(data, prestats_data, layout, p) {
   }
   # now to the actual layer -> trace conversion
   trace.list <- list()
-  aes_no_guide <- names(vapply(p$guides, identical, logical(1), "none"))
+  
+  # ggplot2 >v3.4.2 (specifically #4879) moved the guides system to ggproto, 
+  # which moved the location of the name->value fields
+  guides <- if (inherits(p$guides, "ggproto")) p$guides$guides else p$guides
+  aes_no_guide <- names(guides)[vapply(guides, identical, logical(1), "none")]
+  
   for (i in seq_along(datz)) {
     d <- datz[[i]]
     # variables that produce multiple traces and deserve their own legend entries
@@ -562,7 +567,7 @@ to_basic.GeomCrossbar <- function(data, prestats_data, layout, params, p, ...) {
   # from GeomCrossbar$draw_panel()
   middle <- base::transform(data, x = xmin, xend = xmax, yend = y, alpha = NA)
   nm <- linewidth_or_size(GeomCrossbar)
-  data[[nm]] <- data[[nm]] * params$fatten
+  data[[nm]] <- data[[nm]] * (params$fatten %||% formals(geom_crossbar)$fatten)
   list(
     prefix_class(to_basic.GeomRect(data), "GeomCrossbar"),
     prefix_class(to_basic.GeomSegment(middle), "GeomCrossbar")
@@ -1061,6 +1066,7 @@ make_error <- function(data, params, xy = "x") {
 # (note this function is also used for geom_smooth)
 ribbon_dat <- function(dat) {
   n <- nrow(dat)
+  if (n == 0) return(dat)
   o <- order(dat[["x"]])
   o2 <- order(dat[["x"]], decreasing = TRUE)
   used <- c("x", "ymin", "ymax", "y")

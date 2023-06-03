@@ -1,3 +1,22 @@
+# 4.10.2
+
+## New features
+
+* Closed #2216: Additional selectize.js options can now be passed along to `highlight()`'s `selectize` argument. (#2217)
+
+## Improvements
+
+* Closed #2259: `ggplotly()` now provides better support for ggplot2 >v3.4.2. (#2262)
+
+## Bug fixes
+
+* Closed #2212: `ggplotly()` no longer silently drops legends that are customized through `ggplot2::guide_legend()`.
+* Closed #2179: `save_image()` no longer needs `reticulate::py_run_string("import sys")` in order to run without error. (#2179)
+* Closed #2218: `highlight(selectize = TRUE)` no longer yields an incorrect selectize.js result when there is a combination of crosstalk and non-crosstalk traces. (#2217) 
+* Closed #2208: `ggplotly()` no longer errors given a `geom_area()` with 1 or less data points (error introduced by new behavior in ggplot2 v3.4.0). (#2209)
+* Closed #2220: `ggplotly()` no longer errors on `stat_summary(geom = "crossbar")`. (#2222)
+* Closed #2212: `ggplotly()` no longer removes legends when setting guide properties via `guides(aes = guide_xxx(...))`.
+
 # 4.10.1
 
 ## Changes to plotly.js
@@ -147,7 +166,7 @@ This is minor patch release with a few minor bug fixes and updates test expectat
 
 ## NEW FEATURES & IMPROVEMENTS
 
-* Several new features and improvements related to accessing plotly.js events in shiny (learn more about them in this RStudio [webinar](https://www.rstudio.com/resources/webinars/accessing-and-responding-to-plotly-events-in-shiny/)):
+* Several new features and improvements related to accessing plotly.js events in shiny (learn more about them in this RStudio [webinar](https://posit.co/resources/videos/accessing-and-responding-to-plotly-events-in-shiny/)):
     * The `event` argument of the `event_data()` function now supports the following events: `plotly_selecting`, `plotly_brushed`, `plotly_brushing`, `plotly_restyle`, `plotly_legendclick`, `plotly_legenddoubleclick`, `plotly_clickannotation`, `plotly_afterplot`, `plotly_doubleclick`, `plotly_deselect`, `plotly_unhover`. For examples, see `plotly_example("shiny", "event_data")`, `plotly_example("shiny", "event_data_legends")`, and  `plotly_example("shiny", "event_data_annotation")`, 
     * New `event_register()` and `event_unregister()` functions for declaring which events to transmit over the wire (i.e., from the browser to the shiny server). Events that are likely to have large overhead are not registered by default, so you'll need to register these: `plotly_selecting`, `plotly_unhover`, `plotly_restyle`, `plotly_legendclick`, and `plotly_legenddoubleclick`.
     * A new `priority` argument. By setting `priority='event'`, the `event` is treated like a true event: any reactive expression using the `event` becomes invalidated (regardless of whether the input values has changed). For an example, see `plotly_example("shiny", "event_priority")`.
