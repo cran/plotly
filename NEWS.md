@@ -1,3 +1,17 @@
+# 4.10.3
+
+## Improvements
+
+* `ggplotly()` now works better with the development version of ggplot2 (> v3.4.3). (#2301)
+
+## Bug fixes
+
+* Closed #1947: `ggplotly()` now correctly handles `geom_vline`/`geom_hline` with empty data. Previously, if `geom_vline`/`geom_hline` was passed an empty data frame, it would result in an error. The plot is drawn even if no lines are found; this is the same behavior as `ggplot2`.
+
+* Closed #1214: Do not warn in RStudio on Windows when scattergl is used. Recent RStudio versions can render scattergl correctly.
+
+* Closed #2298: Fix fill assignment in geom_point when a single shape value was used with multiple fill and colour values mapped (@zeehio)
+
 # 4.10.2
 
 ## New features
