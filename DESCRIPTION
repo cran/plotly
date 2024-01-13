@@ -1,6 +1,6 @@
 Package: plotly
 Title: Create Interactive Web Graphics via 'plotly.js'
-Version: 4.10.3
+Version: 4.10.4
 Authors@R: c(person("Carson", "Sievert", role = c("aut", "cre"),
     email = "cpsievert1@gmail.com", comment = c(ORCID = "0000-0002-4958-2844")),
     person("Chris", "Parmer", role = "aut",
@@ -39,7 +39,7 @@ RoxygenNote: 7.2.3
 Encoding: UTF-8
 Config/Needs/check: tidyverse/ggplot2, rcmdcheck, devtools, reshape2
 NeedsCompilation: no
-Packaged: 2023-10-20 21:40:32 UTC; cpsievert
+Packaged: 2024-01-13 20:51:33 UTC; cpsievert
 Author: Carson Sievert [aut, cre] (<https://orcid.org/0000-0002-4958-2844>),
   Chris Parmer [aut],
   Toby Hocking [aut],
@@ -51,4 +51,4 @@ Author: Carson Sievert [aut, cre] (<https://orcid.org/0000-0002-4958-2844>),
   Plotly Technologies Inc. [cph]
 Maintainer: Carson Sievert <cpsievert1@gmail.com>
 Repository: CRAN
-Date/Publication: 2023-10-21 22:50:09 UTC
+Date/Publication: 2024-01-13 22:40:02 UTC

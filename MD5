@@ -1,7 +1,7 @@
-a96572e374de13500987376f53eec1f5 *DESCRIPTION
+d9bff256dc235a129b5a826ae42ed2c9 *DESCRIPTION
 dcd388f52af8e3cb24839540e1b67823 *LICENSE
 a399b4f8c25af79733d9d10de285fe62 *NAMESPACE
-a1619afcef56113a594c65f1644e5483 *NEWS.md
+f9d9f6ee5f50b0d811baca41131a4300 *NEWS.md
 882d8c5439e82ed501d34991bec72516 *R/add.R
 7ea933b6ee33d4874a074fba7d767bb5 *R/animate.R
 aa316aa1242ced4aaafec86d95c67cbc *R/api.R
@@ -11,7 +11,7 @@ bf049db2e4b7d4fc786b1eef0fc92d22 *R/data.R
 7265dd4d930c2b3d7c3f415824e6fba1 *R/dev.R
 5826d0bf9c7ec0ecd95386c0f26ffa3a *R/embed.R
 056b8ec48c1c58299f6dd314ad75dec2 *R/export.R
-87d4427b2cd424e2f2e0ca3dfaaf76f2 *R/ggplotly.R
+4e00a2d803108d2cf383840b97e070ba *R/ggplotly.R
 8ff3b5cc791e42d475f2e73a01a2c2ab *R/group2NA.R
 87dd29f499c5a6f0ca17ee971937954b *R/helpers.R
 c01b8a62191181fa21215e03e24a057d *R/highlight.R
@@ -107,13 +107,13 @@ be31f8397bafdff521fd7f323fd9fa6d *inst/examples/shiny/crossfilter_scatter/app.R
 fe6f94f53f942b11efcad97a5399d9ab *inst/examples/shiny/drill_down/app.R
 9f1155a821a463cf49b16dee0a734df2 *inst/examples/shiny/event_data/DESCRIPTION
 2dce591961cca4fd83f9c05efd583e69 *inst/examples/shiny/event_data/app.R
-d0fb9baa69db2a7880fb35846049a1c0 *inst/examples/shiny/event_data/tests/shinytest/mytest-expected/001.json
+c4cfd387a3a3b5cc0c8018699caf3f27 *inst/examples/shiny/event_data/tests/shinytest/mytest-expected/001.json
 2601b824e212eca71cb55138bced6e40 *inst/examples/shiny/event_data/tests/shinytest/mytest-expected/001.png
-901b2993a7fdfae602df0c37859fdecf *inst/examples/shiny/event_data/tests/shinytest/mytest-expected/002.json
+0eadcd196a26a1b7757a7f2bb84e6fff *inst/examples/shiny/event_data/tests/shinytest/mytest-expected/002.json
 bb0f8fbcf0cf5a9713178a30ca38d91f *inst/examples/shiny/event_data/tests/shinytest/mytest-expected/002.png
-e9c0dfca6f3d4da2df16433beefcc3f7 *inst/examples/shiny/event_data/tests/shinytest/mytest-expected/003.json
+14f9951af14b8ec301988a95985127e8 *inst/examples/shiny/event_data/tests/shinytest/mytest-expected/003.json
 304f08baed23074b22d455ba6cbc83ee *inst/examples/shiny/event_data/tests/shinytest/mytest-expected/003.png
-5e4a2ffc6da7d4476806500c5a6b3fe4 *inst/examples/shiny/event_data/tests/shinytest/mytest-expected/004.json
+3976707de97de9c1b2bcf9bef623eec8 *inst/examples/shiny/event_data/tests/shinytest/mytest-expected/004.json
 2601b824e212eca71cb55138bced6e40 *inst/examples/shiny/event_data/tests/shinytest/mytest-expected/004.png
 2692ed93c52c36fc127a985828b36d96 *inst/examples/shiny/event_data/tests/shinytest/mytest.R
 d41f30fd715492a608094e165ee9e900 *inst/examples/shiny/event_data_3D/app.R
@@ -426,7 +426,7 @@ d3cd3d8768904126d855927d68d0ddb9 *tests/testthat/_snaps/ggplot-histogram/histogr
 40c889f1e339083ca10ceeab6002eb0b *tests/testthat/_snaps/ggplot-hline/hline.svg
 c9c58a3ce0c895aae8eb30217c39848d *tests/testthat/_snaps/ggplot-hline/split-hline-vline-abline.svg
 b9383e809e65036eec57d654fceaeaa3 *tests/testthat/_snaps/ggplot-jitter/jitter-basic.svg
-32f7a1a0a6d97a43041b6e89caa65f96 *tests/testthat/_snaps/ggplot-labels/factor-labels.svg
+de16edb7ee5d201275e85d2b1c94d126 *tests/testthat/_snaps/ggplot-labels/factor-labels.svg
 1e8666adf79677e2884ce27faa2c63ce *tests/testthat/_snaps/ggplot-labels/labels-angles.svg
 547958f4810a70c6e1de0e3606bcff00 *tests/testthat/_snaps/ggplot-labels/labels-ggtitle.svg
 fa0840202f10f26a65f33293eea9f267 *tests/testthat/_snaps/ggplot-labels/labels-scale-x-continuous-name.svg
