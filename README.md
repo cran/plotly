@@ -14,6 +14,12 @@ An R package for creating interactive web graphics via the open source
 JavaScript graphing library
 [plotly.js](https://github.com/plotly/plotly.js).
 
+<div align="center">
+  <a href="https://dash.plotly.com/project-maintenance">
+    <img src="https://dash.plotly.com/assets/images/maintained-by-community.png" width="400px" alt="Maintained by the Plotly Community">
+  </a>
+</div>
+
 ## Installation
 
 Install from CRAN:
@@ -94,7 +100,7 @@ ggplot2 API won’t ever support (e.g., surface,
 plot_ly(z = ~volcano, type = "surface")
 ```
 
-![<https://plot.ly/~brnvg/1134>](https://plot.ly/~brnvg/1134.png)
+![<https://plotly.com/~brnvg/1134>](https://plotly.com/~brnvg/1134.png)
 
 ## Learn more
 
@@ -107,7 +113,3 @@ guidelines](https://github.com/plotly/plotly.R/blob/master/CONTRIBUTING.md).
 Included are directions for opening issues, asking questions,
 contributing changes to plotly, and our code of
 conduct.
-
------
-
-![<https://ropensci.org>](https://www.ropensci.org/public_images/github_footer.png)
