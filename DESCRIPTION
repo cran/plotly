@@ -1,6 +1,6 @@
 Package: plotly
 Title: Create Interactive Web Graphics via 'plotly.js'
-Version: 4.12.0
+Version: 4.12.1
 Authors@R: c(person("Carson", "Sievert", role = c("aut", "cre"),
     email = "cpsievert1@gmail.com", comment = c(ORCID = "0000-0002-4958-2844")),
     person("Chris", "Parmer", role = "aut",
@@ -27,8 +27,8 @@ Depends: R (>= 3.5.0), ggplot2 (>= 3.0.0)
 Imports: tools, scales, httr (>= 1.3.0), jsonlite (>= 1.6), magrittr,
         digest, viridisLite, base64enc, htmltools (>= 0.3.6),
         htmlwidgets (>= 1.5.2.9001), tidyr (>= 1.0.0), RColorBrewer,
-        dplyr, vctrs, tibble, lazyeval (>= 0.2.0), rlang (>= 1.0.0),
-        crosstalk, purrr, data.table, promises
+        dplyr, vctrs, tibble, rlang (>= 1.0.0), crosstalk, purrr,
+        data.table, promises
 Suggests: MASS, maps, hexbin, ggthemes, GGally, ggalluvial, testthat,
         knitr, shiny (>= 1.1.0), shinytest2, curl, rmarkdown, Cairo,
         broom, webshot, listviewer, dendextend, sf, png, IRdisplay,
@@ -40,7 +40,7 @@ Encoding: UTF-8
 Config/Needs/check: tidyverse/ggplot2, ggobi/GGally, rcmdcheck,
         devtools, reshape2, s2
 NeedsCompilation: no
-Packaged: 2026-01-24 00:53:27 UTC; cpsievert
+Packaged: 2026-07-21 23:17:16 UTC; cpsievert
 Author: Carson Sievert [aut, cre] (ORCID:
     <https://orcid.org/0000-0002-4958-2844>),
   Chris Parmer [aut],
@@ -54,4 +54,4 @@ Author: Carson Sievert [aut, cre] (ORCID:
   Plotly Technologies Inc. [cph]
 Maintainer: Carson Sievert <cpsievert1@gmail.com>
 Repository: CRAN
-Date/Publication: 2026-01-24 07:50:02 UTC
+Date/Publication: 2026-07-22 06:10:02 UTC
